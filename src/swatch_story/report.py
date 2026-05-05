@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import json
+from html import escape
+from pathlib import Path
+from typing import Any
+
+
+def write_json_report(summary: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
+    safe_title = escape(title)
+    source = escape(str(summary["source"]))
+    width = summary["size"]["width"]
+    height = summary["size"]["height"]
+    swatches = "\n".join(render_swatch(entry) for entry in summary["palette"])
+    palette_count = len(summary["palette"])
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe_title}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f5;
+      color: #222222;
+    }}
+    body {{
+      margin: 0;
+      padding: 32px;
+    }}
+    main {{
+      max-width: 960px;
+      margin: 0 auto;
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 6vw, 4rem);
+      line-height: 1;
+    }}
+    .meta {{
+      margin: 0 0 28px;
+      color: #555555;
+    }}
+    .palette {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }}
+    .swatch {{
+      min-height: 170px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      box-sizing: border-box;
+    }}
+    .rank {{
+      font-size: 0.85rem;
+      opacity: 0.72;
+    }}
+    .hex {{
+      font-size: 1.35rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }}
+    .details {{
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{safe_title}</h1>
+    <p class="meta">{source} - {width} x {height}px - {palette_count} colors</p>
+    <section class="palette" aria-label="Extracted color palette">
+{swatches}
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def render_swatch(entry: dict[str, Any]) -> str:
+    hex_color = escape(entry["hex"])
+    text_color = escape(entry["best_text_color"])
+    label = escape(entry["label"])
+    rgb = ", ".join(str(value) for value in entry["rgb"])
+    style = f"background: {hex_color}; color: {text_color}"
+    return f"""      <article class="swatch" style="{style}">
+        <div class="rank">#{entry["rank"]} - {label}</div>
+        <div>
+          <div class="hex">{hex_color}</div>
+          <div class="details">
+            RGB {rgb}<br>
+            {entry["percent"]}% of sampled pixels<br>
+            Luminance {entry["luminance"]}
+          </div>
+        </div>
+      </article>"""
+
+
+def write_html_report(
+    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_html_report(summary, title=title), encoding="utf-8")

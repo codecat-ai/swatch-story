@@ -1,0 +1,110 @@
+# swatch-story
+
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON 和独立 HTML 报告。
+
+## 问题与动机
+
+截图、封面、海报和教学图片里常常包含有用的色彩信息，但快速调色板工具有时偏向在线服务，或者只返回原始十六进制颜色。`swatch-story` 会把图片留在本机，并补充占比、亮度标签、黑/白可读文字建议，让输出更适合设计笔记、文档、课程和小型创作流程。
+
+## 功能
+
+- 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
+- JSON 输出包含源文件名、图像尺寸、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、可读的黑/白文字选择，以及明暗标签。
+- 独立 HTML 报告包含可访问的色块，并会转义报告标题。
+- 在终端中输出紧凑摘要，便于快速查看。
+
+## 安装
+
+本项目尚未发布到包注册表。请从 GitHub 克隆并在本地安装：
+
+```bash
+git clone https://github.com/codecat-ai/swatch-story.git
+cd swatch-story
+python -m pip install -e ".[dev]"
+```
+
+## 快速开始
+
+```bash
+swatch-story image.png --colors 6 --json story.json --html story.html --title "Launch Palette"
+```
+
+该命令会打印终端摘要，并在需要时写入 `story.json` 和 `story.html`。
+
+## 示例
+
+只创建 JSON 报告：
+
+```bash
+swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+使用固定采样步长创建可分享的本地 HTML 报告：
+
+```bash
+swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.html
+```
+
+示例调色板条目：
+
+```json
+{
+  "rank": 1,
+  "hex": "#112233",
+  "rgb": [17, 34, 51],
+  "count": 120,
+  "percent": 32.43,
+  "luminance": 0.015,
+  "best_text_color": "white",
+  "label": "dark"
+}
+```
+
+## 配置
+
+`swatch-story` 完全通过 CLI 选项配置：
+
+- `--colors N`：报告的颜色数量，范围为 2 到 12。默认值：6。
+- `--json PATH`：写入 JSON 报告。
+- `--html PATH`：写入独立 HTML 报告。
+- `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
+- `--title TEXT`：HTML 报告标题。默认值：`Swatch Story`。
+
+MVP 不读取配置文件，也不会获取远程图片。
+
+## 开发
+
+```bash
+python -m pip install -e ".[dev]"
+ruff check .
+ruff format --check .
+pytest -q
+python -m build
+```
+
+## 测试
+
+测试套件会构造很小的合成图片，并验证调色板占比、对比文字选择、报告渲染和 CLI 文件输出。
+
+```bash
+pytest -q
+```
+
+## 路线图
+
+- 为常见调色板提供可选颜色名称提示。
+- 增加 CSS 自定义属性或 Markdown 表格等导出格式。
+- 为教学和作品集用途增加更多报告布局。
+- 为超大图片改进采样策略。
+
+## 贡献
+
+欢迎贡献。请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，在改变行为前添加面向行为的测试，并保持 README 翻译含义同步。
+
+## 许可证
+
+MIT。参见 [LICENSE](LICENSE)。
+
+## AI 辅助维护
+
+本项目可能使用 AI 辅助进行维护任务。维护者会在发布前审查变更，并且不会有意复制其他项目的代码或文本。

@@ -1,0 +1,53 @@
+import json
+from pathlib import Path
+
+from swatch_story.report import render_html_report, write_json_report
+
+
+def sample_summary() -> dict:
+    return {
+        "source": "sample.png",
+        "size": {"width": 2, "height": 1},
+        "palette": [
+            {
+                "rank": 1,
+                "hex": "#112233",
+                "rgb": [17, 34, 51],
+                "count": 1,
+                "percent": 50.0,
+                "luminance": 0.015,
+                "best_text_color": "white",
+                "label": "dark",
+            },
+            {
+                "rank": 2,
+                "hex": "#eeeeee",
+                "rgb": [238, 238, 238],
+                "count": 1,
+                "percent": 50.0,
+                "luminance": 0.855,
+                "best_text_color": "black",
+                "label": "light",
+            },
+        ],
+    }
+
+
+def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
+    output = tmp_path / "story.json"
+
+    write_json_report(sample_summary(), output)
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["source"] == "sample.png"
+    assert data["palette"][0]["hex"] == "#112233"
+
+
+def test_html_report_escapes_title_and_contains_swatches() -> None:
+    html = render_html_report(sample_summary(), title="<Palette & Story>")
+
+    assert "&lt;Palette &amp; Story&gt;" in html
+    assert "<Palette & Story>" not in html
+    assert "#112233" in html
+    assert "background: #112233" in html
+    assert "color: white" in html
