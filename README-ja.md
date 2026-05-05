@@ -1,6 +1,6 @@
 # swatch-story
 
-[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+[English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
 `swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON と単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。

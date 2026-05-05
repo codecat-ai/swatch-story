@@ -1,6 +1,6 @@
 # swatch-story
 
-[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+[English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
 `swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON 和独立 HTML 报告。

@@ -23,6 +23,6 @@ python -m build
 
 - Keep the project local-first. Do not add remote image fetching to the MVP.
 - Use English for code comments, commit messages, and issue templates.
-- Keep `README.md`, `README-zh.md`, and `README-jp.md` synchronized in meaning.
+- Keep `README.md`, `README-zh.md`, and `README-ja.md` synchronized in meaning.
 - Add behavior-focused tests before changing behavior.
 - Use Conventional Commit messages when possible.

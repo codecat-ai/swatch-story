@@ -1,6 +1,6 @@
 # swatch-story
 
-[English](README.md) | [中文](README-zh.md) | [日本語](README-jp.md)
+[English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
 `swatch-story` is a local-first image utility that extracts a compact color story from an image and exports both machine-readable JSON and a standalone HTML report.
