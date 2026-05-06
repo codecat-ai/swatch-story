@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、CSS カスタムプロパティ、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、CSS カスタムプロパティ、ポータブルな Markdown、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -14,6 +14,7 @@
 - Pillow を使い、ローカル画像ファイルから決定的にパレットを抽出します。
 - JSON 出力には、元ファイル名、画像サイズ、色の順位、HEX、RGB、カウント、割合、相対輝度、読みやすい黒/白の文字色、明暗ラベルが含まれます。
 - CSS カスタムプロパティ出力には、HEX、RGB の組、読みやすい文字色の変数が含まれます。
+- ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
 - アクセシブルなスウォッチを含む単体 HTML レポートを生成し、レポートタイトルはエスケープされます。
 - ターミナルで素早く確認できるコンパクトな要約を表示します。
 
@@ -30,10 +31,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.css`、`story.html` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.css`、`story.html`、`story.md` を書き出します。
 
 ## 例
 
@@ -53,6 +54,12 @@ swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.h
 
 ```bash
 swatch-story poster.png --colors 5 --css poster-colors.css
+```
+
+メモやドキュメント向けのポータブルな Markdown レポートを作成します。
+
+```bash
+swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
 CSS 出力例：
@@ -89,8 +96,9 @@ CSS 出力例：
 - `--json PATH`: JSON レポートを書き出します。
 - `--css PATH`: CSS カスタムプロパティを書き出します。
 - `--html PATH`: 単体 HTML レポートを書き出します。
+- `--markdown PATH`: ポータブルな Markdown レポートを書き出します。
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
-- `--title TEXT`: HTML レポートのタイトルです。既定値は `Swatch Story` です。
+- `--title TEXT`: HTML と Markdown レポートのタイトルです。既定値は `Swatch Story` です。
 
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
 
@@ -115,7 +123,7 @@ pytest -q
 ## ロードマップ
 
 - 一般的なパレット向けの任意の色名ヒント。
-- Markdown テーブルなどの追加エクスポート形式。
+- デザイン引き継ぎワークフロー向けの追加エクスポート形式。
 - 教材やポートフォリオ向けの追加レポートレイアウト。
 - 非常に大きな画像向けのサンプリング戦略改善。
 
