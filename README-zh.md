@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、CSS 自定义属性和独立 HTML 报告。
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、CSS 自定义属性、便携 Markdown 和独立 HTML 报告。
 
 ## 问题与动机
 
@@ -14,6 +14,7 @@
 - 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
 - JSON 输出包含源文件名、图像尺寸、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、可读的黑/白文字选择，以及明暗标签。
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组和可读文字颜色变量。
+- 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
 - 独立 HTML 报告包含可访问的色块，并会转义报告标题。
 - 在终端中输出紧凑摘要，便于快速查看。
 
@@ -30,10 +31,10 @@ python -m pip install -e ".[dev]"
 ## 快速开始
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --title "Launch Palette"
 ```
 
-该命令会打印终端摘要，并在需要时写入 `story.json`、`story.css` 和 `story.html`。
+该命令会打印终端摘要，并在需要时写入 `story.json`、`story.css`、`story.html` 和 `story.md`。
 
 ## 示例
 
@@ -53,6 +54,12 @@ swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.h
 
 ```bash
 swatch-story poster.png --colors 5 --css poster-colors.css
+```
+
+为笔记或文档创建便携 Markdown 报告：
+
+```bash
+swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
 CSS 输出示例：
@@ -89,8 +96,9 @@ CSS 输出示例：
 - `--json PATH`：写入 JSON 报告。
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
+- `--markdown PATH`：写入便携 Markdown 报告。
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
-- `--title TEXT`：HTML 报告标题。默认值：`Swatch Story`。
+- `--title TEXT`：HTML 和 Markdown 报告标题。默认值：`Swatch Story`。
 
 MVP 不读取配置文件，也不会获取远程图片。
 
@@ -115,7 +123,7 @@ pytest -q
 ## 路线图
 
 - 为常见调色板提供可选颜色名称提示。
-- 增加 Markdown 表格等导出格式。
+- 为设计交付流程增加更多导出格式。
 - 为教学和作品集用途增加更多报告布局。
 - 为超大图片改进采样策略。
 

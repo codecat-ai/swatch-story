@@ -37,6 +37,50 @@ def write_css_report(summary: dict[str, Any], output_path: str | Path) -> None:
     path.write_text(render_css_report(summary), encoding="utf-8")
 
 
+def render_markdown_report(
+    summary: dict[str, Any], *, title: str = "Swatch Story"
+) -> str:
+    source = markdown_escape(str(summary["source"]))
+    width = summary["size"]["width"]
+    height = summary["size"]["height"]
+    palette = summary["palette"]
+    lines = [
+        f"# {markdown_escape(title)}",
+        "",
+        f"Source: `{source}`  ",
+        f"Size: {width} x {height} px  ",
+        f"Colors: {len(palette)}",
+        "",
+        "| Rank | Color | RGB | Percent | Luminance | Text | Label |",
+        "| ---: | --- | --- | ---: | ---: | --- | --- |",
+    ]
+    for entry in palette:
+        rgb = ", ".join(str(value) for value in entry["rgb"])
+        lines.append(
+            "| "
+            f"{entry['rank']} | "
+            f"`{markdown_escape(entry['hex'])}` | "
+            f"`{markdown_escape(rgb)}` | "
+            f"{entry['percent']}% | "
+            f"{entry['luminance']} | "
+            f"{markdown_escape(entry['best_text_color'])} | "
+            f"{markdown_escape(entry['label'])} |"
+        )
+    return "\n".join(lines) + "\n\n"
+
+
+def markdown_escape(value: str) -> str:
+    return escape(value).replace("|", "\\|")
+
+
+def write_markdown_report(
+    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_markdown_report(summary, title=title), encoding="utf-8")
+
+
 def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
     safe_title = escape(title)
     source = escape(str(summary["source"]))

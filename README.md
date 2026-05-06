@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, CSS custom properties, and a standalone HTML report.
+`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, CSS custom properties, portable Markdown, and a standalone HTML report.
 
 ## Problem and Motivation
 
@@ -14,6 +14,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Deterministic palette extraction from local image files with Pillow.
 - JSON output with source filename, image size, color rank, hex, RGB, count, percentage, relative luminance, readable black/white text choice, and a lightness label.
 - CSS custom property output with hex, RGB triplets, and readable text-color variables.
+- Portable Markdown reports with palette metadata and a table for notes and docs.
 - Standalone HTML reports with accessible swatches and escaped report titles.
 - Compact console summaries for quick terminal use.
 
@@ -30,10 +31,10 @@ python -m pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --title "Launch Palette"
 ```
 
-The command prints a terminal summary and, when requested, writes `story.json`, `story.css`, and `story.html`.
+The command prints a terminal summary and, when requested, writes `story.json`, `story.css`, `story.html`, and `story.md`.
 
 ## Examples
 
@@ -53,6 +54,12 @@ Create CSS custom properties for use in a stylesheet:
 
 ```bash
 swatch-story poster.png --colors 5 --css poster-colors.css
+```
+
+Create a portable Markdown report for notes or docs:
+
+```bash
+swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
 Example CSS output:
@@ -89,8 +96,9 @@ Example palette entry:
 - `--json PATH`: write a JSON report.
 - `--css PATH`: write CSS custom properties.
 - `--html PATH`: write a standalone HTML report.
+- `--markdown PATH`: write a portable Markdown report.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
-- `--title TEXT`: title for the HTML report. Default: `Swatch Story`.
+- `--title TEXT`: title for the HTML and Markdown reports. Default: `Swatch Story`.
 
 The MVP does not read a config file and does not fetch remote images.
 
@@ -115,7 +123,7 @@ pytest -q
 ## Roadmap
 
 - Optional color-name hints for common palettes.
-- Additional export formats such as Markdown tables.
+- More export formats for design handoff workflows.
 - More report layouts for teaching and portfolio use.
 - Better sampling strategies for very large images.
 

@@ -73,6 +73,35 @@ def test_cli_writes_css_custom_properties(tmp_path: Path, capsys) -> None:
     assert first["hex"] in capsys.readouterr().out
 
 
+def test_cli_writes_markdown_report(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    markdown_path = tmp_path / "nested" / "story.md"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--markdown",
+            str(markdown_path),
+            "--title",
+            "CLI Story",
+        ]
+    )
+
+    assert exit_code == 0
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# CLI Story\n")
+    assert "| Rank | Color | RGB | Percent | Luminance | Text | Label |" in markdown
+    assert "#ff0000" in markdown
+    assert "#ff0000" in capsys.readouterr().out
+
+
 def test_cli_rejects_invalid_color_count(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)

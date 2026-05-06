@@ -6,14 +6,20 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from swatch_story.palette import PaletteError, summarize_image
-from swatch_story.report import write_css_report, write_html_report, write_json_report
+from swatch_story.report import (
+    write_css_report,
+    write_html_report,
+    write_json_report,
+    write_markdown_report,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
         description=(
-            "Extract a local image color story as console, JSON, HTML, and CSS output."
+            "Extract a local image color story as console, JSON, HTML, CSS, and "
+            "Markdown output."
         ),
     )
     parser.add_argument("image", help="Local image path")
@@ -24,6 +30,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--css", dest="css_path", help="Write CSS custom properties to PATH"
+    )
+    parser.add_argument(
+        "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
     )
     parser.add_argument(
         "--sample-step",
@@ -53,6 +62,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_html_report(summary, args.html_path, title=args.title)
     if args.css_path:
         write_css_report(summary, args.css_path)
+    if args.markdown_path:
+        write_markdown_report(summary, args.markdown_path, title=args.title)
 
     print_summary(summary)
     return 0

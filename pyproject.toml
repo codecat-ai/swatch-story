@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "swatch-story"
 version = "0.1.0"
-description = "Local-first image color stories with JSON and accessible HTML reports."
+description = "Local-first image color stories with JSON, CSS, Markdown, and HTML reports."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

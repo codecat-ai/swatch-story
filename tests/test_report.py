@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from swatch_story.report import render_html_report, write_css_report, write_json_report
+from swatch_story.report import (
+    render_html_report,
+    render_markdown_report,
+    write_css_report,
+    write_json_report,
+    write_markdown_report,
+)
 
 
 def sample_summary() -> dict:
@@ -71,3 +77,29 @@ def test_write_css_report_creates_deterministic_custom_properties(
         "  --swatch-story-color-2-text: black;\n"
         "}\n"
     )
+
+
+def test_markdown_report_renders_portable_palette_table() -> None:
+    markdown = render_markdown_report(sample_summary(), title="Palette <Story>")
+
+    assert markdown == (
+        "# Palette &lt;Story&gt;\n"
+        "\n"
+        "Source: `sample.png`  \n"
+        "Size: 2 x 1 px  \n"
+        "Colors: 2\n"
+        "\n"
+        "| Rank | Color | RGB | Percent | Luminance | Text | Label |\n"
+        "| ---: | --- | --- | ---: | ---: | --- | --- |\n"
+        "| 1 | `#112233` | `17, 34, 51` | 50.0% | 0.015 | white | dark |\n"
+        "| 2 | `#eeeeee` | `238, 238, 238` | 50.0% | 0.855 | black | light |\n"
+        "\n"
+    )
+
+
+def test_write_markdown_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.md"
+
+    write_markdown_report(sample_summary(), output, title="Palette Story")
+
+    assert output.read_text(encoding="utf-8").startswith("# Palette Story\n")
