@@ -20,6 +20,8 @@ def render_css_report(summary: dict[str, Any]) -> str:
     for entry in summary["palette"]:
         rank = entry["rank"]
         rgb = ", ".join(str(value) for value in entry["rgb"])
+        if "name" in entry:
+            lines.append(f"  /* {escape_css_comment(str(entry['name']))} */")
         lines.extend(
             [
                 f"  --swatch-story-color-{rank}: {entry['hex']};",
@@ -29,6 +31,10 @@ def render_css_report(summary: dict[str, Any]) -> str:
         )
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def escape_css_comment(value: str) -> str:
+    return value.replace("*/", "* /")
 
 
 def write_css_report(summary: dict[str, Any], output_path: str | Path) -> None:
@@ -44,6 +50,12 @@ def render_markdown_report(
     width = summary["size"]["width"]
     height = summary["size"]["height"]
     palette = summary["palette"]
+    include_names = any("name" in entry for entry in palette)
+    header = "| Rank | Color | RGB | Percent | Luminance | Text | Label |"
+    divider = "| ---: | --- | --- | ---: | ---: | --- | --- |"
+    if include_names:
+        header = "| Rank | Color | Name | RGB | Percent | Luminance | Text | Label |"
+        divider = "| ---: | --- | --- | --- | ---: | ---: | --- | --- |"
     lines = [
         f"# {markdown_escape(title)}",
         "",
@@ -51,21 +63,27 @@ def render_markdown_report(
         f"Size: {width} x {height} px  ",
         f"Colors: {len(palette)}",
         "",
-        "| Rank | Color | RGB | Percent | Luminance | Text | Label |",
-        "| ---: | --- | --- | ---: | ---: | --- | --- |",
+        header,
+        divider,
     ]
     for entry in palette:
         rgb = ", ".join(str(value) for value in entry["rgb"])
-        lines.append(
-            "| "
-            f"{entry['rank']} | "
-            f"`{markdown_escape(entry['hex'])}` | "
-            f"`{markdown_escape(rgb)}` | "
-            f"{entry['percent']}% | "
-            f"{entry['luminance']} | "
-            f"{markdown_escape(entry['best_text_color'])} | "
-            f"{markdown_escape(entry['label'])} |"
+        row = [
+            str(entry["rank"]),
+            f"`{markdown_escape(entry['hex'])}`",
+        ]
+        if include_names:
+            row.append(markdown_escape(str(entry.get("name", ""))))
+        row.extend(
+            [
+                f"`{markdown_escape(rgb)}`",
+                f"{entry['percent']}%",
+                str(entry["luminance"]),
+                markdown_escape(entry["best_text_color"]),
+                markdown_escape(entry["label"]),
+            ]
         )
+        lines.append("| " + " | ".join(row) + " |")
     return "\n".join(lines) + "\n\n"
 
 
@@ -168,11 +186,15 @@ def render_swatch(entry: dict[str, Any]) -> str:
     label = escape(entry["label"])
     rgb = ", ".join(str(value) for value in entry["rgb"])
     style = f"background: {hex_color}; color: {text_color}"
+    name_line = ""
+    if "name" in entry:
+        name_line = f"            Common name {escape(str(entry['name']))}<br>\n"
     return f"""      <article class="swatch" style="{style}">
         <div class="rank">#{entry["rank"]} - {label}</div>
         <div>
           <div class="hex">{hex_color}</div>
           <div class="details">
+{name_line}\
             RGB {rgb}<br>
             {entry["percent"]}% of sampled pixels<br>
             Luminance {entry["luminance"]}

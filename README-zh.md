@@ -17,6 +17,7 @@
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
 - 独立 HTML 报告包含可访问的色块，并会转义报告标题。
 - 在终端中输出紧凑摘要，便于快速查看。
+- 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 
 ## 安装
 
@@ -62,6 +63,12 @@ swatch-story poster.png --colors 5 --css poster-colors.css
 swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
+在 JSON、HTML、Markdown、CSS 注释和终端摘要中包含近似常见颜色名称提示：
+
+```bash
+swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+```
+
 CSS 输出示例：
 
 ```css
@@ -88,6 +95,22 @@ CSS 输出示例：
 }
 ```
 
+使用 `--names` 时，调色板条目会包含额外的近似常见名称提示：
+
+```json
+{
+  "rank": 1,
+  "hex": "#112233",
+  "rgb": [17, 34, 51],
+  "count": 120,
+  "percent": 32.43,
+  "luminance": 0.015,
+  "best_text_color": "white",
+  "label": "dark",
+  "name": "black"
+}
+```
+
 ## 配置
 
 `swatch-story` 完全通过 CLI 选项配置：
@@ -99,6 +122,7 @@ CSS 输出示例：
 - `--markdown PATH`：写入便携 Markdown 报告。
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
 - `--title TEXT`：HTML 和 Markdown 报告标题。默认值：`Swatch Story`。
+- `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
 MVP 不读取配置文件，也不会获取远程图片。
 
@@ -121,8 +145,6 @@ pytest -q
 ```
 
 ## 路线图
-
-- 为常见调色板提供可选颜色名称提示。
 - 为设计交付流程增加更多导出格式。
 - 为教学和作品集用途增加更多报告布局。
 - 为超大图片改进采样策略。

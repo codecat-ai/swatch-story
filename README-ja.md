@@ -17,6 +17,7 @@
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
 - アクセシブルなスウォッチを含む単体 HTML レポートを生成し、レポートタイトルはエスケープされます。
 - ターミナルで素早く確認できるコンパクトな要約を表示します。
+- 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 
 ## インストール
 
@@ -62,6 +63,12 @@ swatch-story poster.png --colors 5 --css poster-colors.css
 swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
+JSON、HTML、Markdown、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
+
+```bash
+swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+```
+
 CSS 出力例：
 
 ```css
@@ -88,6 +95,22 @@ CSS 出力例：
 }
 ```
 
+`--names` を使うと、パレット項目には近似的な一般色名ヒントが追加されます。
+
+```json
+{
+  "rank": 1,
+  "hex": "#112233",
+  "rgb": [17, 34, 51],
+  "count": 120,
+  "percent": 32.43,
+  "luminance": 0.015,
+  "best_text_color": "white",
+  "label": "dark",
+  "name": "black"
+}
+```
+
 ## 設定
 
 `swatch-story` は CLI オプションだけで設定します。
@@ -99,6 +122,7 @@ CSS 出力例：
 - `--markdown PATH`: ポータブルな Markdown レポートを書き出します。
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
 - `--title TEXT`: HTML と Markdown レポートのタイトルです。既定値は `Swatch Story` です。
+- `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
 
@@ -121,8 +145,6 @@ pytest -q
 ```
 
 ## ロードマップ
-
-- 一般的なパレット向けの任意の色名ヒント。
 - デザイン引き継ぎワークフロー向けの追加エクスポート形式。
 - 教材やポートフォリオ向けの追加レポートレイアウト。
 - 非常に大きな画像向けのサンプリング戦略改善。

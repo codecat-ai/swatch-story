@@ -41,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Sample every N pixels. Defaults to an automatic value.",
     )
     parser.add_argument("--title", default="Swatch Story", help="HTML report title")
+    parser.add_argument(
+        "--names",
+        action="store_true",
+        help="Include approximate common color-name hints in reports and summaries.",
+    )
     return parser
 
 
@@ -50,7 +55,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         summary = summarize_image(
-            Path(args.image), colors=args.colors, sample_step=args.sample_step
+            Path(args.image),
+            colors=args.colors,
+            sample_step=args.sample_step,
+            include_color_names=args.names,
         )
     except PaletteError as exc:
         print(f"swatch-story: {exc}", file=sys.stderr)
@@ -74,10 +82,11 @@ def print_summary(summary: dict) -> None:
         f"{summary['source']} ({summary['size']['width']}x{summary['size']['height']})"
     )
     for entry in summary["palette"]:
+        name_hint = f" name:{entry['name']}" if "name" in entry else ""
         print(
             f"{entry['rank']:>2}. {entry['hex']} "
             f"{entry['percent']:>6.2f}% "
-            f"{entry['label']} text:{entry['best_text_color']}"
+            f"{entry['label']}{name_hint} text:{entry['best_text_color']}"
         )
 
 

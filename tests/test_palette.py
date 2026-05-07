@@ -6,6 +6,7 @@ from PIL import Image
 from swatch_story.palette import (
     PaletteError,
     best_text_color,
+    common_color_name,
     extract_palette,
     summarize_image,
 )
@@ -44,6 +45,14 @@ def test_best_text_color_prefers_readable_foreground() -> None:
     assert best_text_color((245, 240, 230)) == "black"
 
 
+def test_common_color_name_maps_exact_and_nearby_colors() -> None:
+    assert common_color_name((255, 0, 0)) == "red"
+    assert common_color_name((250, 250, 250)) == "white"
+    assert common_color_name((8, 12, 18)) == "black"
+    assert common_color_name((20, 130, 130)) == "teal"
+    assert common_color_name((112, 73, 35)) == "brown"
+
+
 def test_invalid_color_count_raises_clean_error(tmp_path: Path) -> None:
     image_path = tmp_path / "one.png"
     save_blocks(image_path, [(0, 0, 0)])
@@ -70,3 +79,14 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
         "best_text_color",
         "label",
     }
+
+
+def test_summarize_image_can_include_optional_color_names(tmp_path: Path) -> None:
+    image_path = tmp_path / "names.png"
+    save_blocks(image_path, [(255, 0, 0), (0, 0, 255)])
+
+    summary = summarize_image(
+        image_path, colors=2, sample_step=1, include_color_names=True
+    )
+
+    assert [entry["name"] for entry in summary["palette"]] == ["blue", "red"]

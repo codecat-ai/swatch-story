@@ -17,6 +17,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Portable Markdown reports with palette metadata and a table for notes and docs.
 - Standalone HTML reports with accessible swatches and escaped report titles.
 - Compact console summaries for quick terminal use.
+- Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 
 ## Installation
 
@@ -62,6 +63,12 @@ Create a portable Markdown report for notes or docs:
 swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
+Include approximate common color-name hints in JSON, HTML, Markdown, CSS comments, and the terminal summary:
+
+```bash
+swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+```
+
 Example CSS output:
 
 ```css
@@ -88,6 +95,22 @@ Example palette entry:
 }
 ```
 
+With `--names`, palette entries include an extra approximate common-name hint:
+
+```json
+{
+  "rank": 1,
+  "hex": "#112233",
+  "rgb": [17, 34, 51],
+  "count": 120,
+  "percent": 32.43,
+  "luminance": 0.015,
+  "best_text_color": "white",
+  "label": "dark",
+  "name": "black"
+}
+```
+
 ## Configuration
 
 `swatch-story` is configured entirely through CLI options:
@@ -99,6 +122,7 @@ Example palette entry:
 - `--markdown PATH`: write a portable Markdown report.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
 - `--title TEXT`: title for the HTML and Markdown reports. Default: `Swatch Story`.
+- `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
 The MVP does not read a config file and does not fetch remote images.
 
@@ -121,8 +145,6 @@ pytest -q
 ```
 
 ## Roadmap
-
-- Optional color-name hints for common palettes.
 - More export formats for design handoff workflows.
 - More report layouts for teaching and portfolio use.
 - Better sampling strategies for very large images.
