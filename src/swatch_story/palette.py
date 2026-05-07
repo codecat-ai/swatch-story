@@ -232,6 +232,7 @@ def summarize_image(
     except UnidentifiedImageError as exc:
         raise PaletteError(f"unsupported or unreadable image: {path}") from exc
 
+    effective_sample_step = sample_step or automatic_sample_step(width, height)
     palette = extract_palette(path, colors=colors, sample_step=sample_step)
     entries = [entry.to_dict() for entry in palette]
     if include_color_names:
@@ -239,6 +240,12 @@ def summarize_image(
             entry["name"] = common_color_name(tuple(entry["rgb"]))
     return {
         "source": path.name,
+        "source_path": str(path),
         "size": {"width": width, "height": height},
+        "settings": {
+            "colors": colors,
+            "sample_step": effective_sample_step,
+            "color_names": include_color_names,
+        },
         "palette": entries,
     }

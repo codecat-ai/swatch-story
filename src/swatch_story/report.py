@@ -5,6 +5,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from swatch_story.palette import contrast_ratio
+
 
 def write_json_report(summary: dict[str, Any], output_path: str | Path) -> None:
     path = Path(output_path)
@@ -101,11 +103,29 @@ def write_markdown_report(
 
 def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
     safe_title = escape(title)
-    source = escape(str(summary["source"]))
+    source_name = escape(str(summary["source"]))
+    source_path = escape(str(summary.get("source_path", summary["source"])))
     width = summary["size"]["width"]
     height = summary["size"]["height"]
+    settings = summary.get("settings", {})
+    colors = escape(str(settings.get("colors", len(summary["palette"]))))
+    sample_step = settings.get("sample_step")
+    sample_step_label = (
+        f"Every {escape(str(sample_step))} pixel"
+        if sample_step is not None
+        else "Automatic"
+    )
+    names_enabled = bool(
+        settings.get(
+            "color_names",
+            any("name" in entry for entry in summary["palette"]),
+        )
+    )
     swatches = "\n".join(render_swatch(entry) for entry in summary["palette"])
     palette_count = len(summary["palette"])
+    dominant = escape(str(summary["palette"][0]["hex"])) if palette_count else "none"
+    swatch_label = "swatch" if palette_count == 1 else "swatches"
+    names_label = "Included" if names_enabled else "Not included"
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -130,20 +150,43 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
     }}
     h1 {{
       margin: 0 0 8px;
-      font-size: clamp(2rem, 6vw, 4rem);
-      line-height: 1;
+      font-size: 2.4rem;
+      line-height: 1.05;
     }}
     .meta {{
-      margin: 0 0 28px;
+      margin: 0 0 24px;
       color: #555555;
     }}
-    .palette {{
+    .summary {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
+      margin: 0 0 28px;
+    }}
+    .summary div {{
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 14px;
+    }}
+    dt {{
+      color: #666666;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin: 0 0 4px;
+      text-transform: uppercase;
+    }}
+    dd {{
+      margin: 0;
+      overflow-wrap: anywhere;
+    }}
+    .palette {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
     }}
     .swatch {{
-      min-height: 170px;
+      min-height: 290px;
       border: 1px solid rgba(0, 0, 0, 0.16);
       border-radius: 8px;
       display: flex;
@@ -161,16 +204,49 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
       font-weight: 700;
       overflow-wrap: anywhere;
     }}
-    .details {{
+    .details,
+    .guidance {{
       font-size: 0.92rem;
       line-height: 1.45;
+    }}
+    .details dl,
+    .guidance dl {{
+      margin: 12px 0 0;
     }}
   </style>
 </head>
 <body>
   <main>
     <h1>{safe_title}</h1>
-    <p class="meta">{source} - {width} x {height}px - {palette_count} colors</p>
+    <p class="meta">
+      {palette_count} {swatch_label}; dominant color is {dominant}.
+    </p>
+    <dl class="summary" aria-label="Image and extraction summary">
+      <div>
+        <dt>Image name</dt>
+        <dd>{source_name}</dd>
+      </div>
+      <div>
+        <dt>Image path</dt>
+        <dd>{source_path}</dd>
+      </div>
+      <div>
+        <dt>Image size</dt>
+        <dd>{width} x {height}px</dd>
+      </div>
+      <div>
+        <dt>Requested colors</dt>
+        <dd>{colors}</dd>
+      </div>
+      <div>
+        <dt>Sample step</dt>
+        <dd>{sample_step_label}</dd>
+      </div>
+      <div>
+        <dt>Color names</dt>
+        <dd>{names_label}</dd>
+      </div>
+    </dl>
     <section class="palette" aria-label="Extracted color palette">
 {swatches}
     </section>
@@ -185,19 +261,40 @@ def render_swatch(entry: dict[str, Any]) -> str:
     text_color = escape(entry["best_text_color"])
     label = escape(entry["label"])
     rgb = ", ".join(str(value) for value in entry["rgb"])
-    style = f"background: {hex_color}; color: {text_color}"
+    style = escape(f"background: {entry['hex']}; color: {entry['best_text_color']}")
+    contrast = contrast_ratio(
+        tuple(entry["rgb"]),
+        (0, 0, 0) if entry["best_text_color"] == "black" else (255, 255, 255),
+    )
+    contrast_text = escape(f"{contrast:.2f}:1")
+    guidance = "WCAG AA for normal text" if contrast >= 4.5 else "Use for large text"
     name_line = ""
     if "name" in entry:
-        name_line = f"            Common name {escape(str(entry['name']))}<br>\n"
+        name_line = f"""            <dt>Common name</dt>
+            <dd>{escape(str(entry["name"]))}</dd>
+"""
     return f"""      <article class="swatch" style="{style}">
         <div class="rank">#{entry["rank"]} - {label}</div>
         <div>
           <div class="hex">{hex_color}</div>
           <div class="details">
+            <dl>
 {name_line}\
-            RGB {rgb}<br>
-            {entry["percent"]}% of sampled pixels<br>
-            Luminance {entry["luminance"]}
+              <dt>RGB</dt>
+              <dd>{escape(rgb)}</dd>
+              <dt>Share</dt>
+              <dd>{entry["percent"]}% of sampled pixels</dd>
+              <dt>Relative luminance</dt>
+              <dd>{entry["luminance"]}</dd>
+            </dl>
+          </div>
+          <div class="guidance">
+            <dl>
+              <dt>Best readable text</dt>
+              <dd>Use {text_color} text</dd>
+              <dt>Contrast ratio</dt>
+              <dd>{contrast_text}; {guidance}</dd>
+            </dl>
           </div>
         </div>
       </article>"""
