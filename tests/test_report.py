@@ -5,6 +5,7 @@ from swatch_story.report import (
     render_html_report,
     render_markdown_report,
     write_css_report,
+    write_html_report,
     write_json_report,
     write_markdown_report,
 )
@@ -13,7 +14,9 @@ from swatch_story.report import (
 def sample_summary() -> dict:
     return {
         "source": "sample.png",
+        "source_path": "fixtures/sample.png",
         "size": {"width": 2, "height": 1},
+        "settings": {"colors": 2, "sample_step": 1, "color_names": False},
         "palette": [
             {
                 "rank": 1,
@@ -41,6 +44,7 @@ def sample_summary() -> dict:
 
 def named_summary() -> dict:
     summary = sample_summary()
+    summary["settings"]["color_names"] = True
     summary["palette"][0]["name"] = "blue"
     summary["palette"][1]["name"] = "gray"
     return summary
@@ -66,13 +70,69 @@ def test_html_report_escapes_title_and_contains_swatches() -> None:
     assert "color: white" in html
 
 
+def test_html_report_renders_contact_sheet_review_metadata() -> None:
+    html = render_html_report(named_summary(), title="Palette Review")
+
+    assert "<h1>Palette Review</h1>" in html
+    assert "Image name</dt>" in html
+    assert "sample.png</dd>" in html
+    assert "Image path</dt>" in html
+    assert "fixtures/sample.png</dd>" in html
+    assert "Requested colors</dt>" in html
+    assert "2</dd>" in html
+    assert "Sample step</dt>" in html
+    assert "Every 1 pixel</dd>" in html
+    assert "Color names</dt>" in html
+    assert "Included</dd>" in html
+    assert "2 swatches" in html
+    assert "dominant color is #112233" in html
+
+
+def test_html_report_escapes_user_derived_metadata_and_names() -> None:
+    summary = sample_summary()
+    summary["source"] = 'sample"><script>.png'
+    summary["source_path"] = "fixtures/<sample&story>.png"
+    summary["palette"][0]["name"] = "<blue & steel>"
+    summary["palette"][0]["label"] = "<dark>"
+
+    html = render_html_report(summary, title="<Palette & Story>")
+
+    assert "&lt;Palette &amp; Story&gt;" in html
+    assert "sample&quot;&gt;&lt;script&gt;.png" in html
+    assert "fixtures/&lt;sample&amp;story&gt;.png" in html
+    assert "&lt;blue &amp; steel&gt;" in html
+    assert "&lt;dark&gt;" in html
+    assert "<script>" not in html
+    assert "<blue & steel>" not in html
+
+
+def test_html_report_cards_include_contrast_guidance() -> None:
+    html = render_html_report(sample_summary())
+
+    assert "Best readable text</dt>" in html
+    assert "Use white text" in html
+    assert "Use black text" in html
+    assert "Contrast ratio</dt>" in html
+    assert "WCAG AA for normal text" in html
+    assert "Relative luminance</dt>" in html
+
+
 def test_html_report_includes_color_names_only_when_present() -> None:
     unnamed_html = render_html_report(sample_summary())
     named_html = render_html_report(named_summary())
 
     assert "Common name" not in unnamed_html
-    assert "Common name blue" in named_html
-    assert "Common name gray" in named_html
+    assert "Common name</dt>" in named_html
+    assert "blue</dd>" in named_html
+    assert "gray</dd>" in named_html
+
+
+def test_write_html_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.html"
+
+    write_html_report(sample_summary(), output, title="Palette Story")
+
+    assert output.read_text(encoding="utf-8").startswith("<!doctype html>\n")
 
 
 def test_write_css_report_creates_deterministic_custom_properties(

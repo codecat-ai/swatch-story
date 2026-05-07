@@ -12,10 +12,10 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 ## Features
 
 - Deterministic palette extraction from local image files with Pillow.
-- JSON output with source filename, image size, color rank, hex, RGB, count, percentage, relative luminance, readable black/white text choice, and a lightness label.
+- JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, readable black/white text choice, and a lightness label.
 - CSS custom property output with hex, RGB triplets, and readable text-color variables.
 - Portable Markdown reports with palette metadata and a table for notes and docs.
-- Standalone HTML reports with accessible swatches and escaped report titles.
+- Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
 - Compact console summaries for quick terminal use.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 
@@ -50,6 +50,8 @@ Create a shareable local HTML report with a fixed sampling step:
 ```bash
 swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.html
 ```
+
+The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
 
 Create CSS custom properties for use in a stylesheet:
 
@@ -146,7 +148,6 @@ pytest -q
 
 ## Roadmap
 - More export formats for design handoff workflows.
-- More report layouts for teaching and portfolio use.
 - Better sampling strategies for very large images.
 
 ## Contributing

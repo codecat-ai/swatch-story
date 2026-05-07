@@ -36,6 +36,40 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_html_report_includes_settings_and_names(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli <story>.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    html_path = tmp_path / "nested" / "story.html"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--html",
+            str(html_path),
+            "--names",
+        ]
+    )
+
+    assert exit_code == 0
+    html = html_path.read_text(encoding="utf-8")
+    assert "cli &lt;story&gt;.png" in html
+    assert str(image_path).replace("<", "&lt;").replace(">", "&gt;") in html
+    assert "Requested colors</dt>" in html
+    assert "2</dd>" in html
+    assert "Sample step</dt>" in html
+    assert "Every 1 pixel</dd>" in html
+    assert "Color names</dt>" in html
+    assert "Included</dd>" in html
+    assert "Common name" in html
+    assert "#ff0000" in capsys.readouterr().out
+
+
 def test_cli_names_flag_adds_json_and_console_name_hints(
     tmp_path: Path, capsys
 ) -> None:
