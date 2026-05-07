@@ -36,6 +36,60 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_names_flag_adds_json_and_console_name_hints(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+            "--names",
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert [entry["name"] for entry in summary["palette"]] == ["blue", "red"]
+    assert "blue" in capsys.readouterr().out
+
+
+def test_cli_default_json_omits_color_name_hints(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert "name" not in summary["palette"][0]
+    assert "name" not in summary["palette"][1]
+    assert "blue" not in capsys.readouterr().out
+
+
 def test_cli_writes_css_custom_properties(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))

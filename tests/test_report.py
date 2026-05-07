@@ -39,6 +39,13 @@ def sample_summary() -> dict:
     }
 
 
+def named_summary() -> dict:
+    summary = sample_summary()
+    summary["palette"][0]["name"] = "blue"
+    summary["palette"][1]["name"] = "gray"
+    return summary
+
+
 def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
     output = tmp_path / "story.json"
 
@@ -57,6 +64,15 @@ def test_html_report_escapes_title_and_contains_swatches() -> None:
     assert "#112233" in html
     assert "background: #112233" in html
     assert "color: white" in html
+
+
+def test_html_report_includes_color_names_only_when_present() -> None:
+    unnamed_html = render_html_report(sample_summary())
+    named_html = render_html_report(named_summary())
+
+    assert "Common name" not in unnamed_html
+    assert "Common name blue" in named_html
+    assert "Common name gray" in named_html
 
 
 def test_write_css_report_creates_deterministic_custom_properties(
@@ -95,6 +111,19 @@ def test_markdown_report_renders_portable_palette_table() -> None:
         "| 2 | `#eeeeee` | `238, 238, 238` | 50.0% | 0.855 | black | light |\n"
         "\n"
     )
+
+
+def test_markdown_report_includes_color_names_only_when_present() -> None:
+    unnamed_markdown = render_markdown_report(sample_summary())
+    named_markdown = render_markdown_report(named_summary())
+
+    assert "| Rank | Color | RGB | Percent | Luminance | Text | Label |" in (
+        unnamed_markdown
+    )
+    assert "| Rank | Color | Name | RGB | Percent | Luminance | Text | Label |" in (
+        named_markdown
+    )
+    assert "| 1 | `#112233` | blue | `17, 34, 51` |" in named_markdown
 
 
 def test_write_markdown_report_creates_parent_directories(tmp_path: Path) -> None:

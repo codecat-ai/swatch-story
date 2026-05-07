@@ -9,6 +9,22 @@ from typing import Any
 MIN_COLORS = 2
 MAX_COLORS = 12
 
+COMMON_COLOR_NAMES: tuple[tuple[str, tuple[int, int, int]], ...] = (
+    ("black", (0, 0, 0)),
+    ("white", (255, 255, 255)),
+    ("gray", (128, 128, 128)),
+    ("red", (220, 20, 60)),
+    ("orange", (255, 140, 0)),
+    ("yellow", (255, 215, 0)),
+    ("green", (34, 139, 34)),
+    ("teal", (0, 128, 128)),
+    ("cyan", (0, 188, 212)),
+    ("blue", (30, 90, 200)),
+    ("purple", (128, 0, 128)),
+    ("pink", (255, 105, 180)),
+    ("brown", (121, 85, 61)),
+)
+
 
 class PaletteError(ValueError):
     """Raised when palette extraction cannot continue with user input."""
@@ -79,6 +95,17 @@ def lightness_label(luminance: float) -> str:
     if luminance > 0.7:
         return "light"
     return "mid"
+
+
+def common_color_name(rgb: tuple[int, int, int]) -> str:
+    return min(
+        COMMON_COLOR_NAMES,
+        key=lambda named_color: rgb_distance(rgb, named_color[1]),
+    )[0]
+
+
+def rgb_distance(first: tuple[int, int, int], second: tuple[int, int, int]) -> int:
+    return sum((first[index] - second[index]) ** 2 for index in range(3))
 
 
 def automatic_sample_step(width: int, height: int) -> int:
@@ -182,7 +209,11 @@ def build_palette(
 
 
 def summarize_image(
-    image_path: str | Path, *, colors: int = 6, sample_step: int | None = None
+    image_path: str | Path,
+    *,
+    colors: int = 6,
+    sample_step: int | None = None,
+    include_color_names: bool = False,
 ) -> dict[str, Any]:
     path = Path(image_path)
     try:
@@ -202,8 +233,12 @@ def summarize_image(
         raise PaletteError(f"unsupported or unreadable image: {path}") from exc
 
     palette = extract_palette(path, colors=colors, sample_step=sample_step)
+    entries = [entry.to_dict() for entry in palette]
+    if include_color_names:
+        for entry in entries:
+            entry["name"] = common_color_name(tuple(entry["rgb"]))
     return {
         "source": path.name,
         "size": {"width": width, "height": height},
-        "palette": [entry.to_dict() for entry in palette],
+        "palette": entries,
     }
