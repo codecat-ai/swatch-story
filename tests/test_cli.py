@@ -1,4 +1,5 @@
 import json
+import struct
 from pathlib import Path
 
 from PIL import Image
@@ -223,6 +224,38 @@ def test_cli_writes_gpl_palette_with_names_and_collapsed_title(
         "  0   0 255 #0000ff blue\n"
         "255   0   0 #ff0000 red\n"
     )
+    assert "#ff0000" in capsys.readouterr().out
+
+
+def test_cli_writes_ase_palette_with_names_and_title(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    ase_path = tmp_path / "nested" / "story.ase"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--ase",
+            str(ase_path),
+            "--title",
+            "CLI\nStory\tPalette",
+            "--names",
+        ]
+    )
+
+    assert exit_code == 0
+    data = ase_path.read_bytes()
+    assert data[:4] == b"ASEF"
+    assert struct.unpack_from(">HHI", data, 4) == (1, 0, 4)
+    assert b"\x00C\x00L\x00I\x00 \x00S\x00t\x00o\x00r\x00y\x00 \x00P" in data
+    assert b"\x00#\x000\x000\x000\x000\x00f\x00f\x00 \x00b\x00l\x00u\x00e" in data
+    assert b"\x00#\x00f\x00f\x000\x000\x000\x000\x00 \x00r\x00e\x00d" in data
     assert "#ff0000" in capsys.readouterr().out
 
 

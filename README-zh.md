@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、CSS 自定义属性、便携 Markdown、GIMP `.gpl` 调色板和独立 HTML 报告。
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、CSS 自定义属性、便携 Markdown、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
 
 ## 问题与动机
 
@@ -16,6 +16,7 @@
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组和可读文字颜色变量。
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
 - 确定性的 GIMP `.gpl` 调色板输出，便于与设计工具互操作。
+- 确定性的 Adobe Swatch Exchange `.ase` 输出，按报告标题分组 RGB 色块。
 - 独立 HTML 联系表报告包含图像元数据、提取设置、可访问的色块卡片、已转义的用户来源值，以及适合在浏览器审阅或设计评审中使用的对比度建议。
 - 在终端中输出紧凑摘要，便于快速查看。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
@@ -33,10 +34,10 @@ python -m pip install -e ".[dev]"
 ## 快速开始
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-该命令会打印终端摘要，并在需要时写入 `story.json`、`story.css`、`story.html`、`story.md` 和 `story.gpl`。
+该命令会打印终端摘要，并在需要时写入 `story.json`、`story.css`、`story.html`、`story.md`、`story.gpl` 和 `story.ase`。
 
 ## 示例
 
@@ -72,7 +73,13 @@ swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster P
 swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palette"
 ```
 
-在 JSON、HTML、Markdown、GIMP 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
+创建可用于设计工具的 Adobe Swatch Exchange 调色板：
+
+```bash
+swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
+```
+
+在 JSON、HTML、Markdown、GIMP 和 ASE 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
 
 ```bash
 swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
@@ -141,8 +148,9 @@ Columns: 2
 - `--html PATH`：写入独立 HTML 报告。
 - `--markdown PATH`：写入便携 Markdown 报告。
 - `--gpl PATH`：写入确定性的 GIMP `.gpl` 调色板。
+- `--ase PATH`：写入确定性的 Adobe Swatch Exchange `.ase` 调色板。
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
-- `--title TEXT`：HTML、Markdown 和 GIMP 调色板输出标题。默认值：`Swatch Story`。
+- `--title TEXT`：HTML、Markdown、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
 MVP 不读取配置文件，也不会获取远程图片。
@@ -166,7 +174,6 @@ pytest -q
 ```
 
 ## 路线图
-- 为设计交付流程增加更多导出格式。
 - 为超大图片改进采样策略。
 
 ## 贡献

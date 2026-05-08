@@ -1,10 +1,15 @@
 import json
+import struct
 from pathlib import Path
 
+import pytest
+
 from swatch_story.report import (
+    render_ase_report,
     render_gpl_report,
     render_html_report,
     render_markdown_report,
+    write_ase_report,
     write_css_report,
     write_gpl_report,
     write_html_report,
@@ -50,6 +55,89 @@ def named_summary() -> dict:
     summary["palette"][0]["name"] = "blue"
     summary["palette"][1]["name"] = "gray"
     return summary
+
+
+def parse_ase_string(data: bytes, offset: int) -> tuple[str, int]:
+    length = struct.unpack_from(">H", data, offset)[0]
+    offset += 2
+    raw = data[offset : offset + (length * 2)]
+    offset += length * 2
+    return raw[:-2].decode("utf-16-be"), offset
+
+
+def parse_ase_blocks(data: bytes) -> list[tuple[int, bytes]]:
+    assert data[:4] == b"ASEF"
+    assert struct.unpack_from(">HH", data, 4) == (1, 0)
+    block_count = struct.unpack_from(">I", data, 8)[0]
+    offset = 12
+    blocks = []
+    for _ in range(block_count):
+        block_type, block_length = struct.unpack_from(">HI", data, offset)
+        offset += 6
+        block_data = data[offset : offset + block_length]
+        offset += block_length
+        blocks.append((block_type, block_data))
+    assert offset == len(data)
+    return blocks
+
+
+def test_ase_report_renders_deterministic_rgb_group() -> None:
+    ase = render_ase_report(named_summary(), title="  Palette\nStory\tExport  ")
+
+    assert ase == render_ase_report(named_summary(), title="Palette Story Export")
+    blocks = parse_ase_blocks(ase)
+    assert [block_type for block_type, _ in blocks] == [0xC001, 0x0001, 0x0001, 0xC002]
+
+    group_name, offset = parse_ase_string(blocks[0][1], 0)
+    assert group_name == "Palette Story Export"
+    assert offset == len(blocks[0][1])
+
+    first_name, offset = parse_ase_string(blocks[1][1], 0)
+    assert first_name == "#112233 blue"
+    assert blocks[1][1][offset : offset + 4] == b"RGB "
+    assert blocks[1][1][offset + 4 : offset + 16] == struct.pack(
+        ">fff", 17 / 255, 34 / 255, 51 / 255
+    )
+    red, green, blue = struct.unpack_from(">fff", blocks[1][1], offset + 4)
+    assert red == pytest.approx(17 / 255)
+    assert green == pytest.approx(34 / 255)
+    assert blue == pytest.approx(51 / 255)
+    assert struct.unpack_from(">H", blocks[1][1], offset + 16)[0] == 0
+
+    second_name, offset = parse_ase_string(blocks[2][1], 0)
+    assert second_name == "#eeeeee gray"
+    assert blocks[2][1][offset : offset + 4] == b"RGB "
+    assert blocks[2][1][offset + 4 : offset + 16] == struct.pack(
+        ">fff", 238 / 255, 238 / 255, 238 / 255
+    )
+    red, green, blue = struct.unpack_from(">fff", blocks[2][1], offset + 4)
+    assert red == pytest.approx(238 / 255)
+    assert green == pytest.approx(238 / 255)
+    assert blue == pytest.approx(238 / 255)
+    assert struct.unpack_from(">H", blocks[2][1], offset + 16)[0] == 0
+    assert blocks[3][1] == b""
+
+
+def test_ase_report_sanitizes_single_line_names() -> None:
+    summary = sample_summary()
+    summary["palette"][0]["name"] = "steel\nblue\tink"
+
+    blocks = parse_ase_blocks(render_ase_report(summary, title="Title\nName"))
+
+    group_name, _ = parse_ase_string(blocks[0][1], 0)
+    swatch_name, _ = parse_ase_string(blocks[1][1], 0)
+    fallback_name, _ = parse_ase_string(blocks[2][1], 0)
+    assert group_name == "Title Name"
+    assert swatch_name == "#112233 steel blue ink"
+    assert fallback_name == "#eeeeee"
+
+
+def test_write_ase_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "palette.ase"
+
+    write_ase_report(sample_summary(), output, title="Palette Story")
+
+    assert output.read_bytes().startswith(b"ASEF\x00\x01\x00\x00")
 
 
 def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
