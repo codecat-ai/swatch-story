@@ -9,6 +9,7 @@ from swatch_story.palette import PaletteError, summarize_image
 from swatch_story.report import (
     write_ase_report,
     write_css_report,
+    write_csv_report,
     write_gpl_report,
     write_html_report,
     write_json_report,
@@ -20,13 +21,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
         description=(
-            "Extract a local image color story as console, JSON, HTML, CSS, "
-            "Markdown, GIMP palette, and Adobe ASE output."
+            "Extract a local image color story as console, JSON, CSV, HTML, "
+            "CSS, Markdown, GIMP palette, and Adobe ASE output."
         ),
     )
     parser.add_argument("image", help="Local image path")
     parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
     parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
+    parser.add_argument("--csv", dest="csv_path", help="Write CSV report to PATH")
     parser.add_argument(
         "--html", dest="html_path", help="Write standalone HTML to PATH"
     )
@@ -78,6 +80,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.json_path:
         write_json_report(summary, args.json_path)
+    if args.csv_path:
+        write_csv_report(summary, args.csv_path)
     if args.html_path:
         write_html_report(summary, args.html_path, title=args.title)
     if args.css_path:

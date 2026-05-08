@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
 import struct
 from html import escape
@@ -16,6 +18,51 @@ def write_json_report(summary: dict[str, Any], output_path: str | Path) -> None:
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+CSV_HEADER = [
+    "rank",
+    "hex",
+    "r",
+    "g",
+    "b",
+    "count",
+    "percent",
+    "luminance",
+    "best_text_color",
+    "label",
+    "name",
+]
+
+
+def render_csv_report(summary: dict[str, Any]) -> str:
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(CSV_HEADER)
+    for entry in summary["palette"]:
+        red, green, blue = entry["rgb"]
+        writer.writerow(
+            [
+                entry["rank"],
+                entry["hex"],
+                red,
+                green,
+                blue,
+                entry["count"],
+                entry["percent"],
+                entry["luminance"],
+                entry["best_text_color"],
+                entry["label"],
+                entry.get("name", ""),
+            ]
+        )
+    return output.getvalue()
+
+
+def write_csv_report(summary: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_csv_report(summary), encoding="utf-8", newline="")
 
 
 def render_ase_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> bytes:

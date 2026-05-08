@@ -6,11 +6,13 @@ import pytest
 
 from swatch_story.report import (
     render_ase_report,
+    render_csv_report,
     render_gpl_report,
     render_html_report,
     render_markdown_report,
     write_ase_report,
     write_css_report,
+    write_csv_report,
     write_gpl_report,
     write_html_report,
     write_json_report,
@@ -148,6 +150,30 @@ def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
     data = json.loads(output.read_text(encoding="utf-8"))
     assert data["source"] == "sample.png"
     assert data["palette"][0]["hex"] == "#112233"
+
+
+def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:
+    summary = sample_summary()
+    summary["palette"][0]["label"] = "dark, cool"
+    summary["palette"][1]["name"] = "pale gray"
+
+    assert render_csv_report(summary) == (
+        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\r\n"
+        '1,#112233,17,34,51,1,50.0,0.015,white,"dark, cool",\r\n'
+        "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,pale gray\r\n"
+    )
+
+
+def test_write_csv_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.csv"
+
+    write_csv_report(named_summary(), output)
+
+    assert output.read_text(encoding="utf-8") == (
+        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\n"
+        "1,#112233,17,34,51,1,50.0,0.015,white,dark,blue\n"
+        "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,gray\n"
+    )
 
 
 def test_html_report_escapes_title_and_contains_swatches() -> None:

@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, CSS custom properties, portable Markdown, GIMP `.gpl` palettes, Adobe Swatch Exchange `.ase` palettes, and a standalone HTML report.
+`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, UTF-8 CSV, CSS custom properties, portable Markdown, GIMP `.gpl` palettes, Adobe Swatch Exchange `.ase` palettes, and a standalone HTML report.
 
 ## Problem and Motivation
 
@@ -13,6 +13,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 
 - Deterministic palette extraction from local image files with Pillow.
 - JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, readable black/white text choice, and a lightness label.
+- UTF-8 CSV output with stable columns for spreadsheet sorting, filtering, and lightweight data workflows.
 - CSS custom property output with hex, RGB triplets, and readable text-color variables.
 - Portable Markdown reports with palette metadata and a table for notes and docs.
 - Deterministic GIMP `.gpl` palette output for design-tool interoperability.
@@ -34,10 +35,10 @@ python -m pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-The command prints a terminal summary and, when requested, writes `story.json`, `story.css`, `story.html`, `story.md`, `story.gpl`, and `story.ase`.
+The command prints a terminal summary and, when requested, writes `story.json`, `story.csv`, `story.css`, `story.html`, `story.md`, `story.gpl`, and `story.ase`.
 
 ## Examples
 
@@ -45,6 +46,12 @@ Create only a JSON report:
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+Create a spreadsheet-friendly CSV report:
+
+```bash
+swatch-story poster.png --colors 5 --csv poster-colors.csv
 ```
 
 Create a shareable local HTML report with a fixed sampling step:
@@ -79,10 +86,10 @@ Create an Adobe Swatch Exchange palette for design tools:
 swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
 ```
 
-Include approximate common color-name hints in JSON, HTML, Markdown, GIMP and ASE palette labels, CSS comments, and the terminal summary:
+Include approximate common color-name hints in JSON, CSV, HTML, Markdown, GIMP and ASE palette labels, CSS comments, and the terminal summary:
 
 ```bash
-swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+swatch-story poster.png --colors 5 --names --json poster-colors.json --csv poster-colors.csv --markdown poster-colors.md
 ```
 
 Example CSS output:
@@ -109,6 +116,13 @@ Example palette entry:
   "best_text_color": "white",
   "label": "dark"
 }
+```
+
+Example CSV output:
+
+```csv
+rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
+1,#112233,17,34,51,120,32.43,0.015,white,dark,
 ```
 
 Example GIMP palette output:
@@ -144,6 +158,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 - `--colors N`: number of colors to report, from 2 to 12. Default: 6.
 - `--json PATH`: write a JSON report.
+- `--csv PATH`: write a UTF-8 CSV report with stable columns: `rank`, `hex`, `r`, `g`, `b`, `count`, `percent`, `luminance`, `best_text_color`, `label`, and `name`.
 - `--css PATH`: write CSS custom properties.
 - `--html PATH`: write a standalone HTML report.
 - `--markdown PATH`: write a portable Markdown report.
