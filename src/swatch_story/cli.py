@@ -8,6 +8,7 @@ from pathlib import Path
 from swatch_story.palette import PaletteError, summarize_image
 from swatch_story.report import (
     write_css_report,
+    write_gpl_report,
     write_html_report,
     write_json_report,
     write_markdown_report,
@@ -18,8 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
         description=(
-            "Extract a local image color story as console, JSON, HTML, CSS, and "
-            "Markdown output."
+            "Extract a local image color story as console, JSON, HTML, CSS, "
+            "Markdown, and GIMP palette output."
         ),
     )
     parser.add_argument("image", help="Local image path")
@@ -35,12 +36,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
     )
     parser.add_argument(
+        "--gpl", dest="gpl_path", help="Write GIMP .gpl palette to PATH"
+    )
+    parser.add_argument(
         "--sample-step",
         type=int,
         default=None,
         help="Sample every N pixels. Defaults to an automatic value.",
     )
-    parser.add_argument("--title", default="Swatch Story", help="HTML report title")
+    parser.add_argument(
+        "--title",
+        default="Swatch Story",
+        help="Title for HTML, Markdown, and GIMP palette output",
+    )
     parser.add_argument(
         "--names",
         action="store_true",
@@ -72,6 +80,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_css_report(summary, args.css_path)
     if args.markdown_path:
         write_markdown_report(summary, args.markdown_path, title=args.title)
+    if args.gpl_path:
+        write_gpl_report(summary, args.gpl_path, title=args.title)
 
     print_summary(summary)
     return 0
