@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Added deterministic GIMP `.gpl` palette export with `--gpl PATH`, whitespace-collapsed titles, and optional `--names` labels for design-tool interoperability.
 - Added browser-review HTML contact-sheet reports with image path/name metadata, extraction settings, escaped user-derived values, swatch cards, and contrast guidance.
 - Added optional `--names` color-name hints for JSON, HTML, Markdown, CSS comments, and console summaries using a small offline built-in common-color set.
 - Added Markdown palette report rendering and `--markdown PATH` CLI output for notes and docs.
