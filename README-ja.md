@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、CSS カスタムプロパティ、ポータブルな Markdown、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -13,6 +13,7 @@
 
 - Pillow を使い、ローカル画像ファイルから決定的にパレットを抽出します。
 - JSON 出力には、元ファイル名、元ファイルパス、画像サイズ、抽出設定、色の順位、HEX、RGB、カウント、割合、相対輝度、読みやすい黒/白の文字色、明暗ラベルが含まれます。
+- UTF-8 CSV 出力には、表計算ソフトでの並べ替え、絞り込み、軽量なデータ処理に使いやすい安定した列が含まれます。
 - CSS カスタムプロパティ出力には、HEX、RGB の組、読みやすい文字色の変数が含まれます。
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
 - デザインツールと連携しやすい、決定的な GIMP `.gpl` パレットを書き出します。
@@ -34,10 +35,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.css`、`story.html`、`story.md`、`story.gpl`、`story.ase` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.gpl`、`story.ase` を書き出します。
 
 ## 例
 
@@ -45,6 +46,12 @@ JSON レポートだけを作成します。
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+表計算ソフトで扱いやすい CSV レポートを作成します。
+
+```bash
+swatch-story poster.png --colors 5 --csv poster-colors.csv
 ```
 
 固定サンプリング間隔で共有しやすいローカル HTML レポートを作成します。
@@ -79,10 +86,10 @@ swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palet
 swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
 ```
 
-JSON、HTML、Markdown、GIMP と ASE パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
+JSON、CSV、HTML、Markdown、GIMP と ASE パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
 
 ```bash
-swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+swatch-story poster.png --colors 5 --names --json poster-colors.json --csv poster-colors.csv --markdown poster-colors.md
 ```
 
 CSS 出力例：
@@ -109,6 +116,13 @@ CSS 出力例：
   "best_text_color": "white",
   "label": "dark"
 }
+```
+
+CSV 出力例：
+
+```csv
+rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
+1,#112233,17,34,51,120,32.43,0.015,white,dark,
 ```
 
 GIMP パレット出力例：
@@ -144,6 +158,7 @@ Columns: 2
 
 - `--colors N`: レポートする色数です。2 から 12 まで指定できます。既定値は 6 です。
 - `--json PATH`: JSON レポートを書き出します。
+- `--csv PATH`: UTF-8 CSV レポートを書き出します。列は `rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`best_text_color`、`label`、`name` で安定しています。
 - `--css PATH`: CSS カスタムプロパティを書き出します。
 - `--html PATH`: 単体 HTML レポートを書き出します。
 - `--markdown PATH`: ポータブルな Markdown レポートを書き出します。

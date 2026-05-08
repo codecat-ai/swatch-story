@@ -162,6 +162,64 @@ def test_cli_writes_css_custom_properties(tmp_path: Path, capsys) -> None:
     assert first["hex"] in capsys.readouterr().out
 
 
+def test_cli_writes_csv_report_with_blank_names_by_default(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    csv_path = tmp_path / "nested" / "story.csv"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--csv",
+            str(csv_path),
+        ]
+    )
+
+    assert exit_code == 0
+    lines = csv_path.read_text(encoding="utf-8").splitlines()
+    assert (
+        lines[0] == "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name"
+    )
+    assert lines[1].endswith(",")
+    assert lines[2].endswith(",")
+    assert "#ff0000" in capsys.readouterr().out
+
+
+def test_cli_writes_csv_report_with_names(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    csv_path = tmp_path / "nested" / "story.csv"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--csv",
+            str(csv_path),
+            "--names",
+        ]
+    )
+
+    assert exit_code == 0
+    csv = csv_path.read_text(encoding="utf-8")
+    assert "1,#0000ff,0,0,255,1,50.0,0.072,white,dark,blue\n" in csv
+    assert "2,#ff0000,255,0,0,1,50.0,0.213,black,dark,red\n" in csv
+    assert "#ff0000" in capsys.readouterr().out
+
+
 def test_cli_writes_markdown_report(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))

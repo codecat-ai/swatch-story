@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、CSS 自定义属性、便携 Markdown、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、UTF-8 CSV、CSS 自定义属性、便携 Markdown、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
 
 ## 问题与动机
 
@@ -13,6 +13,7 @@
 
 - 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
 - JSON 输出包含源文件名、源文件路径、图像尺寸、提取设置、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、可读的黑/白文字选择，以及明暗标签。
+- UTF-8 CSV 输出提供稳定列，便于在电子表格中排序、筛选，也适合轻量数据流程。
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组和可读文字颜色变量。
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
 - 确定性的 GIMP `.gpl` 调色板输出，便于与设计工具互操作。
@@ -34,10 +35,10 @@ python -m pip install -e ".[dev]"
 ## 快速开始
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-该命令会打印终端摘要，并在需要时写入 `story.json`、`story.css`、`story.html`、`story.md`、`story.gpl` 和 `story.ase`。
+该命令会打印终端摘要，并在需要时写入 `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.gpl` 和 `story.ase`。
 
 ## 示例
 
@@ -45,6 +46,12 @@ swatch-story image.png --colors 6 --json story.json --css story.css --html story
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+创建适合电子表格使用的 CSV 报告：
+
+```bash
+swatch-story poster.png --colors 5 --csv poster-colors.csv
 ```
 
 使用固定采样步长创建可分享的本地 HTML 报告：
@@ -79,10 +86,10 @@ swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palet
 swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
 ```
 
-在 JSON、HTML、Markdown、GIMP 和 ASE 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
+在 JSON、CSV、HTML、Markdown、GIMP 和 ASE 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
 
 ```bash
-swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
+swatch-story poster.png --colors 5 --names --json poster-colors.json --csv poster-colors.csv --markdown poster-colors.md
 ```
 
 CSS 输出示例：
@@ -109,6 +116,13 @@ CSS 输出示例：
   "best_text_color": "white",
   "label": "dark"
 }
+```
+
+CSV 输出示例：
+
+```csv
+rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
+1,#112233,17,34,51,120,32.43,0.015,white,dark,
 ```
 
 GIMP 调色板输出示例：
@@ -144,6 +158,7 @@ Columns: 2
 
 - `--colors N`：报告的颜色数量，范围为 2 到 12。默认值：6。
 - `--json PATH`：写入 JSON 报告。
+- `--csv PATH`：写入 UTF-8 CSV 报告，包含稳定列：`rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`best_text_color`、`label` 和 `name`。
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
 - `--markdown PATH`：写入便携 Markdown 报告。
