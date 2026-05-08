@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, CSS custom properties, portable Markdown, GIMP `.gpl` palettes, and a standalone HTML report.
+`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, CSS custom properties, portable Markdown, GIMP `.gpl` palettes, Adobe Swatch Exchange `.ase` palettes, and a standalone HTML report.
 
 ## Problem and Motivation
 
@@ -16,6 +16,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - CSS custom property output with hex, RGB triplets, and readable text-color variables.
 - Portable Markdown reports with palette metadata and a table for notes and docs.
 - Deterministic GIMP `.gpl` palette output for design-tool interoperability.
+- Deterministic Adobe Swatch Exchange `.ase` output with RGB swatches grouped by report title.
 - Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
 - Compact console summaries for quick terminal use.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
@@ -33,10 +34,10 @@ python -m pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-The command prints a terminal summary and, when requested, writes `story.json`, `story.css`, `story.html`, `story.md`, and `story.gpl`.
+The command prints a terminal summary and, when requested, writes `story.json`, `story.css`, `story.html`, `story.md`, `story.gpl`, and `story.ase`.
 
 ## Examples
 
@@ -72,7 +73,13 @@ Create a GIMP palette for design tools:
 swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palette"
 ```
 
-Include approximate common color-name hints in JSON, HTML, Markdown, GIMP palette labels, CSS comments, and the terminal summary:
+Create an Adobe Swatch Exchange palette for design tools:
+
+```bash
+swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
+```
+
+Include approximate common color-name hints in JSON, HTML, Markdown, GIMP and ASE palette labels, CSS comments, and the terminal summary:
 
 ```bash
 swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
@@ -141,8 +148,9 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--html PATH`: write a standalone HTML report.
 - `--markdown PATH`: write a portable Markdown report.
 - `--gpl PATH`: write a deterministic GIMP `.gpl` palette.
+- `--ase PATH`: write a deterministic Adobe Swatch Exchange `.ase` palette.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
-- `--title TEXT`: title for HTML, Markdown, and GIMP palette output. Default: `Swatch Story`.
+- `--title TEXT`: title for HTML, Markdown, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
 The MVP does not read a config file and does not fetch remote images.
@@ -166,7 +174,6 @@ pytest -q
 ```
 
 ## Roadmap
-- More export formats for design handoff workflows.
 - Better sampling strategies for very large images.
 
 ## Contributing

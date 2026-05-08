@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、CSS カスタムプロパティ、ポータブルな Markdown、GIMP `.gpl` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、CSS カスタムプロパティ、ポータブルな Markdown、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -16,6 +16,7 @@
 - CSS カスタムプロパティ出力には、HEX、RGB の組、読みやすい文字色の変数が含まれます。
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
 - デザインツールと連携しやすい、決定的な GIMP `.gpl` パレットを書き出します。
+- レポートタイトルでグループ化した RGB スウォッチを含む、決定的な Adobe Swatch Exchange `.ase` を書き出します。
 - 画像メタデータ、抽出設定、アクセシブルなスウォッチカード、エスケープ済みのユーザー由来値、ブラウザー確認やデザイン講評向けのコントラスト指針を含む、単体 HTML コンタクトシートレポートを生成します。
 - ターミナルで素早く確認できるコンパクトな要約を表示します。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
@@ -33,10 +34,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.css`、`story.html`、`story.md`、`story.gpl` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.css`、`story.html`、`story.md`、`story.gpl`、`story.ase` を書き出します。
 
 ## 例
 
@@ -72,7 +73,13 @@ swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster P
 swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palette"
 ```
 
-JSON、HTML、Markdown、GIMP パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
+デザインツール向けの Adobe Swatch Exchange パレットを作成します。
+
+```bash
+swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
+```
+
+JSON、HTML、Markdown、GIMP と ASE パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
 
 ```bash
 swatch-story poster.png --colors 5 --names --json poster-colors.json --markdown poster-colors.md
@@ -141,8 +148,9 @@ Columns: 2
 - `--html PATH`: 単体 HTML レポートを書き出します。
 - `--markdown PATH`: ポータブルな Markdown レポートを書き出します。
 - `--gpl PATH`: 決定的な GIMP `.gpl` パレットを書き出します。
+- `--ase PATH`: 決定的な Adobe Swatch Exchange `.ase` パレットを書き出します。
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
-- `--title TEXT`: HTML、Markdown、GIMP パレット出力のタイトルです。既定値は `Swatch Story` です。
+- `--title TEXT`: HTML、Markdown、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
@@ -166,7 +174,6 @@ pytest -q
 ```
 
 ## ロードマップ
-- デザイン引き継ぎワークフロー向けの追加エクスポート形式。
 - 非常に大きな画像向けのサンプリング戦略改善。
 
 ## コントリビュート

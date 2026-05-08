@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,57 @@ def write_json_report(summary: dict[str, Any], output_path: str | Path) -> None:
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def render_ase_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> bytes:
+    blocks = [_ase_block(0xC001, _ase_string(title))]
+    for entry in summary["palette"]:
+        red, green, blue = (value / 255 for value in entry["rgb"])
+        data = b"".join(
+            [
+                _ase_string(_ase_swatch_name(entry)),
+                b"RGB ",
+                struct.pack(">fffH", red, green, blue, 0),
+            ]
+        )
+        blocks.append(_ase_block(0x0001, data))
+    blocks.append(_ase_block(0xC002, b""))
+    return b"".join(
+        [
+            b"ASEF",
+            struct.pack(">HHI", 1, 0, len(blocks)),
+            *blocks,
+        ]
+    )
+
+
+def _ase_block(block_type: int, data: bytes) -> bytes:
+    return struct.pack(">HI", block_type, len(data)) + data
+
+
+def _ase_string(value: object) -> bytes:
+    text = _single_line(value)
+    encoded = f"{text}\0".encode("utf-16-be")
+    return struct.pack(">H", len(encoded) // 2) + encoded
+
+
+def _ase_swatch_name(entry: dict[str, Any]) -> str:
+    label = str(entry["hex"])
+    if "name" in entry:
+        label = f"{label} {_single_line(entry['name'])}"
+    return label
+
+
+def _single_line(value: object) -> str:
+    return " ".join(str(value).split())
+
+
+def write_ase_report(
+    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(render_ase_report(summary, title=title))
 
 
 def render_css_report(summary: dict[str, Any]) -> str:
