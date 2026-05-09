@@ -99,6 +99,39 @@ def test_cli_names_flag_adds_json_and_console_name_hints(
     assert "blue" in capsys.readouterr().out
 
 
+def test_cli_ignore_color_updates_palette_json_and_console(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-ignore.png"
+    image = Image.new("RGB", (4, 1))
+    image.putdata([(255, 255, 255), (255, 255, 255), (255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--ignore-color",
+            "FFFFFF",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["ignore_color"] == "#ffffff"
+    assert [entry["hex"] for entry in summary["palette"]] == ["#0000ff", "#ff0000"]
+    assert [entry["percent"] for entry in summary["palette"]] == [50.0, 50.0]
+    console = capsys.readouterr().out
+    assert "#ffffff" not in console
+    assert "#0000ff" in console
+
+
 def test_cli_default_json_omits_color_name_hints(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))
@@ -389,3 +422,13 @@ def test_cli_rejects_invalid_sample_limit(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 2
     assert "--sample-limit must be 1 or greater" in capsys.readouterr().err
+
+
+def test_cli_rejects_invalid_ignore_color(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    exit_code = main([str(image_path), "--ignore-color", "#12345z"])
+
+    assert exit_code == 2
+    assert "--ignore-color must be #rrggbb or rrggbb" in capsys.readouterr().err

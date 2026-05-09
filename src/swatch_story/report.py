@@ -251,6 +251,14 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
     dominant = escape(str(summary["palette"][0]["hex"])) if palette_count else "none"
     swatch_label = "swatch" if palette_count == 1 else "swatches"
     names_label = "Included" if names_enabled else "Not included"
+    ignore_color = settings.get("ignore_color")
+    ignore_color_html = ""
+    if ignore_color is not None:
+        ignore_color_html = f"""      <div>
+        <dt>Ignored color</dt>
+        <dd>{escape(str(ignore_color))}</dd>
+      </div>
+"""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -371,6 +379,7 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
         <dt>Color names</dt>
         <dd>{names_label}</dd>
       </div>
+{ignore_color_html}\
     </dl>
     <section class="palette" aria-label="Extracted color palette">
 {swatches}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from math import sqrt
@@ -9,6 +10,7 @@ from typing import Any
 MIN_COLORS = 2
 MAX_COLORS = 12
 DEFAULT_SAMPLE_LIMIT = 10_000
+HEX_RGB_PATTERN = re.compile(r"#?[0-9a-fA-F]{6}\Z")
 
 COMMON_COLOR_NAMES: tuple[tuple[str, tuple[int, int, int]], ...] = (
     ("black", (0, 0, 0)),
@@ -66,6 +68,26 @@ def validate_color_count(colors: int) -> None:
 def validate_sample_limit(sample_limit: int) -> None:
     if sample_limit < 1:
         raise PaletteError("--sample-limit must be 1 or greater")
+
+
+def normalize_ignore_color(ignore_color: str | None) -> str | None:
+    if ignore_color is None:
+        return None
+    if not HEX_RGB_PATTERN.fullmatch(ignore_color):
+        raise PaletteError("--ignore-color must be #rrggbb or rrggbb")
+    value = ignore_color.lower()
+    if not value.startswith("#"):
+        value = f"#{value}"
+    return value
+
+
+def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    value = hex_color.lstrip("#")
+    return (
+        int(value[0:2], 16),
+        int(value[2:4], 16),
+        int(value[4:6], 16),
+    )
 
 
 def relative_luminance(rgb: tuple[int, int, int]) -> float:
@@ -140,9 +162,16 @@ def extract_palette(
     colors: int = 6,
     sample_step: int | None = None,
     sample_limit: int = DEFAULT_SAMPLE_LIMIT,
+    ignore_color: str | None = None,
 ) -> list[PaletteEntry]:
     validate_color_count(colors)
     validate_sample_limit(sample_limit)
+    normalized_ignore_color = normalize_ignore_color(ignore_color)
+    ignored_rgb = (
+        hex_to_rgb(normalized_ignore_color)
+        if normalized_ignore_color is not None
+        else None
+    )
     path = Path(image_path)
     if sample_step is not None and sample_step < 1:
         raise PaletteError("--sample-step must be 1 or greater")
@@ -174,6 +203,13 @@ def extract_palette(
 
     if not sampled:
         raise PaletteError("image did not produce any sampled pixels")
+    if ignored_rgb is not None:
+        sampled = [rgb for rgb in sampled if rgb != ignored_rgb]
+        if not sampled:
+            raise PaletteError(
+                f"all sampled pixels were ignored by --ignore-color "
+                f"{normalized_ignore_color}"
+            )
 
     return build_palette(sampled, colors)
 
@@ -231,8 +267,10 @@ def summarize_image(
     sample_step: int | None = None,
     sample_limit: int = DEFAULT_SAMPLE_LIMIT,
     include_color_names: bool = False,
+    ignore_color: str | None = None,
 ) -> dict[str, Any]:
     validate_sample_limit(sample_limit)
+    normalized_ignore_color = normalize_ignore_color(ignore_color)
     path = Path(image_path)
     try:
         from PIL import Image, UnidentifiedImageError
@@ -254,21 +292,28 @@ def summarize_image(
         width, height, sample_limit=sample_limit
     )
     palette = extract_palette(
-        path, colors=colors, sample_step=sample_step, sample_limit=sample_limit
+        path,
+        colors=colors,
+        sample_step=sample_step,
+        sample_limit=sample_limit,
+        ignore_color=normalized_ignore_color,
     )
     entries = [entry.to_dict() for entry in palette]
     if include_color_names:
         for entry in entries:
             entry["name"] = common_color_name(tuple(entry["rgb"]))
+    settings = {
+        "colors": colors,
+        "sample_step": effective_sample_step,
+        "sample_limit": sample_limit,
+        "color_names": include_color_names,
+    }
+    if normalized_ignore_color is not None:
+        settings["ignore_color"] = normalized_ignore_color
     return {
         "source": path.name,
         "source_path": str(path),
         "size": {"width": width, "height": height},
-        "settings": {
-            "colors": colors,
-            "sample_step": effective_sample_step,
-            "sample_limit": sample_limit,
-            "color_names": include_color_names,
-        },
+        "settings": settings,
         "palette": entries,
     }
