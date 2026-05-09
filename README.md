@@ -20,6 +20,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Deterministic Adobe Swatch Exchange `.ase` output with RGB swatches grouped by report title.
 - Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
 - Compact console summaries for quick terminal use.
+- Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 
 ## Installation
@@ -58,6 +59,12 @@ Create a shareable local HTML report with a fixed sampling step:
 
 ```bash
 swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.html
+```
+
+Tune automatic sampling for a very large image without choosing a fixed step:
+
+```bash
+swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
 ```
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
@@ -165,6 +172,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--gpl PATH`: write a deterministic GIMP `.gpl` palette.
 - `--ase PATH`: write a deterministic Adobe Swatch Exchange `.ase` palette.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
+- `--sample-limit N`: target sampled pixels for the automatic step when `--sample-step` is omitted. Default: 10000. Must be 1 or greater. If `--sample-step` is provided, the fixed step controls pixel iteration; JSON settings still include the selected `sample_limit` and effective `sample_step`.
 - `--title TEXT`: title for HTML, Markdown, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
@@ -189,7 +197,8 @@ pytest -q
 ```
 
 ## Roadmap
-- Better sampling strategies for very large images.
+- Optional perceptual color-space clustering for closer visual grouping than RGB buckets.
+- Ignore or de-emphasize configurable background colors when extracting palettes from UI screenshots.
 
 ## Contributing
 
