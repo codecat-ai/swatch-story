@@ -125,6 +125,60 @@ def test_cli_default_json_omits_color_name_hints(tmp_path: Path, capsys) -> None
     assert "blue" not in capsys.readouterr().out
 
 
+def test_cli_sample_limit_controls_automatic_sample_step(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "large.png"
+    Image.new("RGB", (400, 400), (0, 0, 0)).save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-limit",
+            "40000",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    settings = json.loads(json_path.read_text(encoding="utf-8"))["settings"]
+    assert settings["sample_limit"] == 40_000
+    assert settings["sample_step"] == 2
+    assert "#000000" in capsys.readouterr().out
+
+
+def test_cli_sample_step_takes_precedence_over_sample_limit(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "large.png"
+    Image.new("RGB", (400, 400), (0, 0, 0)).save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "5",
+            "--sample-limit",
+            "40000",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    settings = json.loads(json_path.read_text(encoding="utf-8"))["settings"]
+    assert settings["sample_limit"] == 40_000
+    assert settings["sample_step"] == 5
+    assert "#000000" in capsys.readouterr().out
+
+
 def test_cli_writes_css_custom_properties(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))
@@ -325,3 +379,13 @@ def test_cli_rejects_invalid_color_count(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 2
     assert "between 2 and 12" in capsys.readouterr().err
+
+
+def test_cli_rejects_invalid_sample_limit(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    exit_code = main([str(image_path), "--sample-limit", "0"])
+
+    assert exit_code == 2
+    assert "--sample-limit must be 1 or greater" in capsys.readouterr().err

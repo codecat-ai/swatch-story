@@ -5,7 +5,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from swatch_story.palette import PaletteError, summarize_image
+from swatch_story.palette import DEFAULT_SAMPLE_LIMIT, PaletteError, summarize_image
 from swatch_story.report import (
     write_ase_report,
     write_css_report,
@@ -51,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Sample every N pixels. Defaults to an automatic value.",
     )
     parser.add_argument(
+        "--sample-limit",
+        type=int,
+        default=DEFAULT_SAMPLE_LIMIT,
+        help="Target sampled pixels for automatic sampling. Defaults to 10000.",
+    )
+    parser.add_argument(
         "--title",
         default="Swatch Story",
         help="Title for HTML, Markdown, GIMP palette, and ASE output",
@@ -72,6 +78,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             Path(args.image),
             colors=args.colors,
             sample_step=args.sample_step,
+            sample_limit=args.sample_limit,
             include_color_names=args.names,
         )
     except PaletteError as exc:

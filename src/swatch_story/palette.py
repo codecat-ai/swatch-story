@@ -8,6 +8,7 @@ from typing import Any
 
 MIN_COLORS = 2
 MAX_COLORS = 12
+DEFAULT_SAMPLE_LIMIT = 10_000
 
 COMMON_COLOR_NAMES: tuple[tuple[str, tuple[int, int, int]], ...] = (
     ("black", (0, 0, 0)),
@@ -62,6 +63,11 @@ def validate_color_count(colors: int) -> None:
         raise PaletteError(f"--colors must be between {MIN_COLORS} and {MAX_COLORS}")
 
 
+def validate_sample_limit(sample_limit: int) -> None:
+    if sample_limit < 1:
+        raise PaletteError("--sample-limit must be 1 or greater")
+
+
 def relative_luminance(rgb: tuple[int, int, int]) -> float:
     def channel(value: int) -> float:
         normalized = value / 255
@@ -108,11 +114,14 @@ def rgb_distance(first: tuple[int, int, int], second: tuple[int, int, int]) -> i
     return sum((first[index] - second[index]) ** 2 for index in range(3))
 
 
-def automatic_sample_step(width: int, height: int) -> int:
+def automatic_sample_step(
+    width: int, height: int, *, sample_limit: int = DEFAULT_SAMPLE_LIMIT
+) -> int:
+    validate_sample_limit(sample_limit)
     pixel_count = width * height
-    if pixel_count <= 10_000:
+    if pixel_count <= sample_limit:
         return 1
-    return max(1, int(sqrt(pixel_count / 10_000)))
+    return max(1, int(sqrt(pixel_count / sample_limit)))
 
 
 def quantized_key(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
@@ -126,9 +135,14 @@ def average_rgb(values: list[tuple[int, int, int]]) -> tuple[int, int, int]:
 
 
 def extract_palette(
-    image_path: str | Path, *, colors: int = 6, sample_step: int | None = None
+    image_path: str | Path,
+    *,
+    colors: int = 6,
+    sample_step: int | None = None,
+    sample_limit: int = DEFAULT_SAMPLE_LIMIT,
 ) -> list[PaletteEntry]:
     validate_color_count(colors)
+    validate_sample_limit(sample_limit)
     path = Path(image_path)
     if sample_step is not None and sample_step < 1:
         raise PaletteError("--sample-step must be 1 or greater")
@@ -145,7 +159,9 @@ def extract_palette(
         with Image.open(path) as image:
             rgba_image = image.convert("RGBA")
             width, height = rgba_image.size
-            step = sample_step or automatic_sample_step(width, height)
+            step = sample_step or automatic_sample_step(
+                width, height, sample_limit=sample_limit
+            )
             sampled = [
                 composite_over_white(rgba_image.getpixel((x, y)))
                 for y in range(0, height, step)
@@ -213,8 +229,10 @@ def summarize_image(
     *,
     colors: int = 6,
     sample_step: int | None = None,
+    sample_limit: int = DEFAULT_SAMPLE_LIMIT,
     include_color_names: bool = False,
 ) -> dict[str, Any]:
+    validate_sample_limit(sample_limit)
     path = Path(image_path)
     try:
         from PIL import Image, UnidentifiedImageError
@@ -232,8 +250,12 @@ def summarize_image(
     except UnidentifiedImageError as exc:
         raise PaletteError(f"unsupported or unreadable image: {path}") from exc
 
-    effective_sample_step = sample_step or automatic_sample_step(width, height)
-    palette = extract_palette(path, colors=colors, sample_step=sample_step)
+    effective_sample_step = sample_step or automatic_sample_step(
+        width, height, sample_limit=sample_limit
+    )
+    palette = extract_palette(
+        path, colors=colors, sample_step=sample_step, sample_limit=sample_limit
+    )
     entries = [entry.to_dict() for entry in palette]
     if include_color_names:
         for entry in entries:
@@ -245,6 +267,7 @@ def summarize_image(
         "settings": {
             "colors": colors,
             "sample_step": effective_sample_step,
+            "sample_limit": sample_limit,
             "color_names": include_color_names,
         },
         "palette": entries,

@@ -5,6 +5,7 @@ from PIL import Image
 
 from swatch_story.palette import (
     PaletteError,
+    automatic_sample_step,
     best_text_color,
     common_color_name,
     extract_palette,
@@ -53,6 +54,11 @@ def test_common_color_name_maps_exact_and_nearby_colors() -> None:
     assert common_color_name((112, 73, 35)) == "brown"
 
 
+def test_automatic_sample_step_accepts_custom_sample_limit() -> None:
+    assert automatic_sample_step(400, 400, sample_limit=40_000) == 2
+    assert automatic_sample_step(100, 100, sample_limit=40_000) == 1
+
+
 def test_invalid_color_count_raises_clean_error(tmp_path: Path) -> None:
     image_path = tmp_path / "one.png"
     save_blocks(image_path, [(0, 0, 0)])
@@ -69,6 +75,7 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
 
     assert summary["source"] == "summary.png"
     assert summary["size"] == {"width": 2, "height": 1}
+    assert summary["settings"]["sample_limit"] == 10_000
     assert summary["palette"][0].keys() == {
         "rank",
         "hex",
