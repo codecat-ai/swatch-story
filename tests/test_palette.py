@@ -41,6 +41,62 @@ def test_extract_palette_reports_dominant_colors_and_percentages(
     assert [entry.rank for entry in palette] == [1, 2]
 
 
+def test_extract_palette_ignores_exact_hex_before_ranking(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "background.png"
+    save_blocks(
+        image_path,
+        [
+            (255, 255, 255),
+            (255, 255, 255),
+            (255, 0, 0),
+            (0, 0, 255),
+            (0, 0, 255),
+        ],
+    )
+
+    palette = extract_palette(
+        image_path, colors=2, sample_step=1, ignore_color="#ffffff"
+    )
+
+    assert [entry.hex for entry in palette] == ["#0000ff", "#ff0000"]
+    assert [entry.count for entry in palette] == [2, 1]
+    assert [entry.percent for entry in palette] == [66.67, 33.33]
+
+
+def test_extract_palette_accepts_case_insensitive_ignore_color_without_hash(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "case.png"
+    save_blocks(image_path, [(170, 187, 204), (0, 0, 0), (0, 0, 0)])
+
+    palette = extract_palette(
+        image_path, colors=2, sample_step=1, ignore_color="AABBCC"
+    )
+
+    assert [entry.hex for entry in palette] == ["#000000"]
+    assert [entry.percent for entry in palette] == [100.0]
+
+
+def test_extract_palette_raises_when_ignore_color_removes_all_samples(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "empty.png"
+    save_blocks(image_path, [(255, 255, 255), (255, 255, 255)])
+
+    with pytest.raises(PaletteError, match="all sampled pixels were ignored"):
+        extract_palette(image_path, colors=2, sample_step=1, ignore_color="ffffff")
+
+
+def test_extract_palette_rejects_invalid_ignore_color(tmp_path: Path) -> None:
+    image_path = tmp_path / "invalid.png"
+    save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
+
+    with pytest.raises(PaletteError, match="--ignore-color must be"):
+        extract_palette(image_path, colors=2, sample_step=1, ignore_color="#ffffgg")
+
+
 def test_best_text_color_prefers_readable_foreground() -> None:
     assert best_text_color((10, 20, 30)) == "white"
     assert best_text_color((245, 240, 230)) == "black"
@@ -86,6 +142,18 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
         "best_text_color",
         "label",
     }
+
+
+def test_summarize_image_normalizes_ignore_color_in_settings(tmp_path: Path) -> None:
+    image_path = tmp_path / "summary-ignore.png"
+    save_blocks(image_path, [(170, 187, 204), (0, 0, 0), (255, 255, 255)])
+
+    summary = summarize_image(
+        image_path, colors=2, sample_step=1, ignore_color="AABBCC"
+    )
+
+    assert summary["settings"]["ignore_color"] == "#aabbcc"
+    assert [entry["hex"] for entry in summary["palette"]] == ["#000000", "#ffffff"]
 
 
 def test_summarize_image_can_include_optional_color_names(tmp_path: Path) -> None:

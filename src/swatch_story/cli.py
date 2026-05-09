@@ -57,6 +57,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Target sampled pixels for automatic sampling. Defaults to 10000.",
     )
     parser.add_argument(
+        "--ignore-color",
+        default=None,
+        metavar="HEX",
+        help=("Exclude sampled pixels matching #rrggbb or rrggbb before ranking."),
+    )
+    parser.add_argument(
         "--title",
         default="Swatch Story",
         help="Title for HTML, Markdown, GIMP palette, and ASE output",
@@ -80,6 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sample_step=args.sample_step,
             sample_limit=args.sample_limit,
             include_color_names=args.names,
+            ignore_color=args.ignore_color,
         )
     except PaletteError as exc:
         print(f"swatch-story: {exc}", file=sys.stderr)

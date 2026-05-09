@@ -21,6 +21,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
 - Compact console summaries for quick terminal use.
 - Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
+- `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 
 ## Installation
@@ -65,6 +66,12 @@ Tune automatic sampling for a very large image without choosing a fixed step:
 
 ```bash
 swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
+```
+
+Ignore a flat background color before ranking the palette:
+
+```bash
+swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
 ```
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
@@ -125,6 +132,8 @@ Example palette entry:
 }
 ```
 
+When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before ranking, so swatch percentages are based only on the remaining sampled pixels.
+
 Example CSV output:
 
 ```csv
@@ -173,6 +182,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--ase PATH`: write a deterministic Adobe Swatch Exchange `.ase` palette.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
 - `--sample-limit N`: target sampled pixels for the automatic step when `--sample-step` is omitted. Default: 10000. Must be 1 or greater. If `--sample-step` is provided, the fixed step controls pixel iteration; JSON settings still include the selected `sample_limit` and effective `sample_step`.
+- `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
 - `--title TEXT`: title for HTML, Markdown, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
@@ -198,7 +208,6 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering for closer visual grouping than RGB buckets.
-- Ignore or de-emphasize configurable background colors when extracting palettes from UI screenshots.
 
 ## Contributing
 

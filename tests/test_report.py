@@ -200,8 +200,19 @@ def test_html_report_renders_contact_sheet_review_metadata() -> None:
     assert "Every 1 pixel</dd>" in html
     assert "Color names</dt>" in html
     assert "Included</dd>" in html
+    assert "Ignored color</dt>" not in html
     assert "2 swatches" in html
     assert "dominant color is #112233" in html
+
+
+def test_html_report_includes_ignored_color_when_configured() -> None:
+    summary = sample_summary()
+    summary["settings"]["ignore_color"] = "#ffffff"
+
+    html = render_html_report(summary)
+
+    assert "Ignored color</dt>" in html
+    assert "#ffffff</dd>" in html
 
 
 def test_html_report_escapes_user_derived_metadata_and_names() -> None:
