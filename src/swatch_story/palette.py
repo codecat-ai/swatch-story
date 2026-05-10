@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import colorsys
 import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import sqrt
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 MIN_COLORS = 2
 MAX_COLORS = 12
 DEFAULT_SAMPLE_LIMIT = 10_000
+VALID_SORTS = ("frequency", "luminance", "hue")
 HEX_RGB_PATTERN = re.compile(r"#?[0-9a-fA-F]{6}\Z")
 
 COMMON_COLOR_NAMES: tuple[tuple[str, tuple[int, int, int]], ...] = (
@@ -68,6 +70,12 @@ def validate_color_count(colors: int) -> None:
 def validate_sample_limit(sample_limit: int) -> None:
     if sample_limit < 1:
         raise PaletteError("--sample-limit must be 1 or greater")
+
+
+def validate_sort(sort: str) -> None:
+    if sort not in VALID_SORTS:
+        choices = ", ".join(VALID_SORTS)
+        raise PaletteError(f"sort must be one of: {choices}")
 
 
 def normalize_ignore_color(ignore_color: str | None) -> str | None:
@@ -260,6 +268,28 @@ def build_palette(
     return entries
 
 
+def sort_palette(entries: list[PaletteEntry], sort: str) -> list[PaletteEntry]:
+    validate_sort(sort)
+    if sort == "frequency":
+        return entries
+    if sort == "luminance":
+        sorted_entries = sorted(entries, key=lambda entry: (entry.luminance, entry.rgb))
+    else:
+        sorted_entries = sorted(entries, key=hue_sort_key)
+    return [
+        replace(entry, rank=rank) for rank, entry in enumerate(sorted_entries, start=1)
+    ]
+
+
+def hue_sort_key(
+    entry: PaletteEntry,
+) -> tuple[bool, float, float, tuple[int, int, int]]:
+    red, green, blue = (channel / 255 for channel in entry.rgb)
+    hue, saturation, _value = colorsys.rgb_to_hsv(red, green, blue)
+    is_grayscale = saturation <= 0.01
+    return (is_grayscale, hue, entry.luminance, entry.rgb)
+
+
 def summarize_image(
     image_path: str | Path,
     *,
@@ -268,8 +298,10 @@ def summarize_image(
     sample_limit: int = DEFAULT_SAMPLE_LIMIT,
     include_color_names: bool = False,
     ignore_color: str | None = None,
+    sort: str = "frequency",
 ) -> dict[str, Any]:
     validate_sample_limit(sample_limit)
+    validate_sort(sort)
     normalized_ignore_color = normalize_ignore_color(ignore_color)
     path = Path(image_path)
     try:
@@ -298,7 +330,7 @@ def summarize_image(
         sample_limit=sample_limit,
         ignore_color=normalized_ignore_color,
     )
-    entries = [entry.to_dict() for entry in palette]
+    entries = [entry.to_dict() for entry in sort_palette(palette, sort)]
     if include_color_names:
         for entry in entries:
             entry["name"] = common_color_name(tuple(entry["rgb"]))
@@ -306,6 +338,7 @@ def summarize_image(
         "colors": colors,
         "sample_step": effective_sample_step,
         "sample_limit": sample_limit,
+        "sort": sort,
         "color_names": include_color_names,
     }
     if normalized_ignore_color is not None:

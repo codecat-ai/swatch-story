@@ -251,6 +251,7 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
     dominant = escape(str(summary["palette"][0]["hex"])) if palette_count else "none"
     swatch_label = "swatch" if palette_count == 1 else "swatches"
     names_label = "Included" if names_enabled else "Not included"
+    sort_label = escape(str(settings.get("sort", "frequency")))
     ignore_color = settings.get("ignore_color")
     ignore_color_html = ""
     if ignore_color is not None:
@@ -378,6 +379,10 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
       <div>
         <dt>Color names</dt>
         <dd>{names_label}</dd>
+      </div>
+      <div>
+        <dt>Sort</dt>
+        <dd>{sort_label}</dd>
       </div>
 {ignore_color_html}\
     </dl>
