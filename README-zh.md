@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、UTF-8 CSV、CSS 自定义属性、便携 Markdown、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、UTF-8 CSV、CSS 自定义属性、便携 Markdown、便于粘贴的纯文本、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
 
 ## 问题与动机
 
@@ -16,6 +16,7 @@
 - UTF-8 CSV 输出提供稳定列，便于在电子表格中排序、筛选，也适合轻量数据流程。
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组和可读文字颜色变量。
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
+- 纯文本调色板单页包含源文件元数据、提取设置，以及每个色块一行的易粘贴内容，适合邮件、工单和课程笔记。
 - 确定性的 GIMP `.gpl` 调色板输出，便于与设计工具互操作。
 - 确定性的 Adobe Swatch Exchange `.ase` 输出，按报告标题分组 RGB 色块。
 - 独立 HTML 联系表报告包含图像元数据、提取设置、可访问的色块卡片、已转义的用户来源值，以及适合在浏览器审阅或设计评审中使用的对比度建议。
@@ -27,7 +28,7 @@
 
 ## 安装
 
-本项目尚未发布到包注册表。请从 GitHub 克隆并在本地安装：
+本项目尚未发布到包注册表。只能从源码检出安装：
 
 ```bash
 git clone https://github.com/codecat-ai/swatch-story.git
@@ -38,10 +39,10 @@ python -m pip install -e ".[dev]"
 ## 快速开始
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-该命令会打印终端摘要，并在需要时写入 `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.gpl` 和 `story.ase`。
+该命令会打印终端摘要，并在需要时写入 `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.gpl` 和 `story.ase`。
 
 ## 示例
 
@@ -101,6 +102,12 @@ swatch-story poster.png --colors 5 --css poster-colors.css
 swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
 ```
 
+创建便于粘贴到邮件、工单或课程笔记的纯文本调色板单页：
+
+```bash
+swatch-story poster.png --colors 5 --text poster-colors.txt --title "Poster Palette"
+```
+
 创建可用于设计工具的 GIMP 调色板：
 
 ```bash
@@ -113,7 +120,7 @@ swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palet
 swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
 ```
 
-在 JSON、CSV、HTML、Markdown、GIMP 和 ASE 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
+在 JSON、CSV、HTML、Markdown、纯文本、GIMP 和 ASE 调色板标签、CSS 注释和终端摘要中包含近似常见颜色名称提示：
 
 ```bash
 swatch-story poster.png --colors 5 --names --json poster-colors.json --csv poster-colors.csv --markdown poster-colors.md
@@ -150,6 +157,20 @@ CSV 输出示例：
 ```csv
 rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
 1,#112233,17,34,51,120,32.43,0.015,white,dark,
+```
+
+纯文本输出示例：
+
+```text
+Poster Palette
+
+Source: poster.png
+Image size: 1200 x 800 px
+Settings: colors 2; sample step 1; sample limit 10000; sort frequency; ignored color none; names not included
+
+Swatches:
+1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
+2. #eeeeee | rgb(238, 238, 238) | 18.25% | light | text black
 ```
 
 GIMP 调色板输出示例：
@@ -191,13 +212,14 @@ JSON 设置会包含所选排序模式，例如 `"sort": "frequency"`。使用 `
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
 - `--markdown PATH`：写入便携 Markdown 报告。
+- `--text PATH`：写入 UTF-8 纯文本调色板单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的排名、十六进制颜色、RGB 三元组、占比、标签、最佳文字颜色和可选名称提示。
 - `--gpl PATH`：写入确定性的 GIMP `.gpl` 调色板。
 - `--ase PATH`：写入确定性的 Adobe Swatch Exchange `.ase` 调色板。
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
 - `--sample-limit N`：在未提供 `--sample-step` 时，设置自动步长的目标采样像素数。默认值：10000。必须大于等于 1。如果提供了 `--sample-step`，固定步长会控制像素迭代；JSON 设置仍会包含所选的 `sample_limit` 和实际的 `sample_step`。
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
-- `--title TEXT`：HTML、Markdown、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
+- `--title TEXT`：HTML、Markdown、纯文本、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
 MVP 不读取配置文件，也不会获取远程图片。

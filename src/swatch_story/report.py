@@ -226,6 +226,55 @@ def write_markdown_report(
     path.write_text(render_markdown_report(summary, title=title), encoding="utf-8")
 
 
+def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
+    settings = summary.get("settings", {})
+    width = summary["size"]["width"]
+    height = summary["size"]["height"]
+    palette = summary["palette"]
+    colors = _single_line(settings.get("colors", len(palette)))
+    sample_step = _single_line(settings.get("sample_step", "unknown"))
+    sample_limit = _single_line(settings.get("sample_limit", "unknown"))
+    sort = _single_line(settings.get("sort", "frequency"))
+    ignored_color = _single_line(settings.get("ignore_color", "none"))
+    names_enabled = bool(
+        settings.get("color_names", any("name" in entry for entry in palette))
+    )
+    names_label = "included" if names_enabled else "not included"
+    lines = [
+        _single_line(title),
+        "",
+        f"Source: {_single_line(summary['source'])}",
+        f"Image size: {width} x {height} px",
+        (
+            f"Settings: colors {colors}; sample step {sample_step}; "
+            f"sample limit {sample_limit}; sort {sort}; "
+            f"ignored color {ignored_color}; names {names_label}"
+        ),
+        "",
+        "Swatches:",
+    ]
+    for entry in palette:
+        red, green, blue = entry["rgb"]
+        line = (
+            f"{entry['rank']}. {_single_line(entry['hex'])} | "
+            f"rgb({red}, {green}, {blue}) | {entry['percent']}% | "
+            f"{_single_line(entry['label'])} | "
+            f"text {_single_line(entry['best_text_color'])}"
+        )
+        if "name" in entry:
+            line = f"{line} | name {_single_line(entry['name'])}"
+        lines.append(line)
+    return "\n".join(lines) + "\n"
+
+
+def write_text_report(
+    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_text_report(summary, title=title), encoding="utf-8")
+
+
 def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
     safe_title = escape(title)
     source_name = escape(str(summary["source"]))
