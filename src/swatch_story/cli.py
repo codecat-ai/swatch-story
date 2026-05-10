@@ -5,7 +5,12 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from swatch_story.palette import DEFAULT_SAMPLE_LIMIT, PaletteError, summarize_image
+from swatch_story.palette import (
+    DEFAULT_SAMPLE_LIMIT,
+    VALID_SORTS,
+    PaletteError,
+    summarize_image,
+)
 from swatch_story.report import (
     write_ase_report,
     write_css_report,
@@ -63,6 +68,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=("Exclude sampled pixels matching #rrggbb or rrggbb before ranking."),
     )
     parser.add_argument(
+        "--sort",
+        choices=VALID_SORTS,
+        default="frequency",
+        help=(
+            "Order selected palette entries by frequency, luminance, or hue. "
+            "Default: frequency."
+        ),
+    )
+    parser.add_argument(
         "--title",
         default="Swatch Story",
         help="Title for HTML, Markdown, GIMP palette, and ASE output",
@@ -87,6 +101,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sample_limit=args.sample_limit,
             include_color_names=args.names,
             ignore_color=args.ignore_color,
+            sort=args.sort,
         )
     except PaletteError as exc:
         print(f"swatch-story: {exc}", file=sys.stderr)

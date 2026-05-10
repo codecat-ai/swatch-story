@@ -132,6 +132,7 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
     assert summary["source"] == "summary.png"
     assert summary["size"] == {"width": 2, "height": 1}
     assert summary["settings"]["sample_limit"] == 10_000
+    assert summary["settings"]["sort"] == "frequency"
     assert summary["palette"][0].keys() == {
         "rank",
         "hex",
@@ -154,6 +155,105 @@ def test_summarize_image_normalizes_ignore_color_in_settings(tmp_path: Path) -> 
 
     assert summary["settings"]["ignore_color"] == "#aabbcc"
     assert [entry["hex"] for entry in summary["palette"]] == ["#000000", "#ffffff"]
+
+
+def test_summarize_image_frequency_sort_preserves_existing_ranking(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "frequency.png"
+    save_blocks(
+        image_path,
+        [
+            (255, 0, 0),
+            (255, 0, 0),
+            (255, 0, 0),
+            (0, 0, 255),
+            (0, 0, 255),
+            (255, 255, 255),
+            (0, 0, 0),
+        ],
+    )
+
+    summary = summarize_image(image_path, colors=4, sample_step=1, sort="frequency")
+
+    assert [entry["hex"] for entry in summary["palette"]] == [
+        "#ff0000",
+        "#0000ff",
+        "#000000",
+        "#ffffff",
+    ]
+    assert [entry["rank"] for entry in summary["palette"]] == [1, 2, 3, 4]
+
+
+def test_summarize_image_luminance_sort_orders_dark_to_light_and_reranks(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "luminance.png"
+    save_blocks(
+        image_path,
+        [
+            (255, 0, 0),
+            (255, 0, 0),
+            (255, 0, 0),
+            (0, 0, 255),
+            (0, 0, 255),
+            (255, 255, 255),
+            (0, 0, 0),
+        ],
+    )
+
+    summary = summarize_image(image_path, colors=4, sample_step=1, sort="luminance")
+
+    assert summary["settings"]["sort"] == "luminance"
+    assert [entry["hex"] for entry in summary["palette"]] == [
+        "#000000",
+        "#0000ff",
+        "#ff0000",
+        "#ffffff",
+    ]
+    assert [entry["rank"] for entry in summary["palette"]] == [1, 2, 3, 4]
+    assert [entry["count"] for entry in summary["palette"]] == [1, 2, 3, 1]
+
+
+def test_summarize_image_hue_sort_orders_chromatic_before_grayscale_and_reranks(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "hue.png"
+    save_blocks(
+        image_path,
+        [
+            (128, 128, 128),
+            (128, 128, 128),
+            (128, 128, 128),
+            (0, 0, 255),
+            (0, 0, 255),
+            (255, 0, 0),
+            (255, 255, 0),
+            (0, 255, 0),
+            (64, 64, 64),
+        ],
+    )
+
+    summary = summarize_image(image_path, colors=6, sample_step=1, sort="hue")
+
+    assert summary["settings"]["sort"] == "hue"
+    assert [entry["hex"] for entry in summary["palette"]] == [
+        "#ff0000",
+        "#ffff00",
+        "#00ff00",
+        "#0000ff",
+        "#404040",
+        "#808080",
+    ]
+    assert [entry["rank"] for entry in summary["palette"]] == [1, 2, 3, 4, 5, 6]
+
+
+def test_summarize_image_rejects_invalid_sort_value(tmp_path: Path) -> None:
+    image_path = tmp_path / "sort-error.png"
+    save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
+
+    with pytest.raises(PaletteError, match="sort must be one of"):
+        summarize_image(image_path, colors=2, sample_step=1, sort="brightness")
 
 
 def test_summarize_image_can_include_optional_color_names(tmp_path: Path) -> None:

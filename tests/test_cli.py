@@ -2,6 +2,7 @@ import json
 import struct
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from swatch_story.cli import main
@@ -130,6 +131,64 @@ def test_cli_ignore_color_updates_palette_json_and_console(
     console = capsys.readouterr().out
     assert "#ffffff" not in console
     assert "#0000ff" in console
+
+
+def test_cli_sort_luminance_updates_json_and_console_order(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-sort.png"
+    image = Image.new("RGB", (7, 1))
+    image.putdata(
+        [
+            (255, 0, 0),
+            (255, 0, 0),
+            (255, 0, 0),
+            (0, 0, 255),
+            (0, 0, 255),
+            (255, 255, 255),
+            (0, 0, 0),
+        ]
+    )
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "4",
+            "--sample-step",
+            "1",
+            "--sort",
+            "luminance",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["sort"] == "luminance"
+    assert [entry["hex"] for entry in summary["palette"]] == [
+        "#000000",
+        "#0000ff",
+        "#ff0000",
+        "#ffffff",
+    ]
+    console_lines = capsys.readouterr().out.splitlines()
+    assert " 1. #000000" in console_lines[1]
+    assert " 4. #ffffff" in console_lines[4]
+
+
+def test_cli_rejects_invalid_sort_choice(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--sort", "brightness"])
+
+    assert exc_info.value.code == 2
+    assert "invalid choice: 'brightness'" in capsys.readouterr().err
 
 
 def test_cli_default_json_omits_color_name_hints(tmp_path: Path, capsys) -> None:
