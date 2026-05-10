@@ -395,6 +395,40 @@ def test_cli_writes_markdown_report(tmp_path: Path, capsys) -> None:
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_writes_text_report_and_prints_summary(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    text_path = tmp_path / "nested" / "story.txt"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--text",
+            str(text_path),
+            "--title",
+            "CLI\nStory",
+            "--names",
+        ]
+    )
+
+    assert exit_code == 0
+    text = text_path.read_text(encoding="utf-8")
+    assert text.startswith("CLI Story\n")
+    assert "Source: cli.png\n" in text
+    assert (
+        "Settings: colors 2; sample step 1; sample limit 10000; "
+        "sort frequency; ignored color none; names included\n"
+    ) in text
+    assert "1. #0000ff | rgb(0, 0, 255) | 50.0% | dark | text white | name blue" in text
+    assert "#ff0000" in capsys.readouterr().out
+
+
 def test_cli_writes_gpl_palette_with_names_and_collapsed_title(
     tmp_path: Path, capsys
 ) -> None:

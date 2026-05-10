@@ -10,6 +10,7 @@ from swatch_story.report import (
     render_gpl_report,
     render_html_report,
     render_markdown_report,
+    render_text_report,
     write_ase_report,
     write_css_report,
     write_csv_report,
@@ -17,6 +18,7 @@ from swatch_story.report import (
     write_html_report,
     write_json_report,
     write_markdown_report,
+    write_text_report,
 )
 
 
@@ -340,3 +342,47 @@ def test_write_markdown_report_creates_parent_directories(tmp_path: Path) -> Non
     write_markdown_report(sample_summary(), output, title="Palette Story")
 
     assert output.read_text(encoding="utf-8").startswith("# Palette Story\n")
+
+
+def test_text_report_renders_paste_friendly_palette_sheet() -> None:
+    summary = named_summary()
+    summary["settings"]["ignore_color"] = "#ffffff"
+
+    text = render_text_report(summary, title="  Palette\nStory\tExport  ")
+
+    assert text == (
+        "Palette Story Export\n"
+        "\n"
+        "Source: sample.png\n"
+        "Image size: 2 x 1 px\n"
+        "Settings: colors 2; sample step 1; sample limit unknown; "
+        "sort frequency; ignored color #ffffff; names included\n"
+        "\n"
+        "Swatches:\n"
+        "1. #112233 | rgb(17, 34, 51) | 50.0% | dark | text white | name blue\n"
+        "2. #eeeeee | rgb(238, 238, 238) | 50.0% | light | text black | name gray\n"
+    )
+
+
+def test_text_report_sanitizes_multiline_title_source_label_and_names() -> None:
+    summary = named_summary()
+    summary["source"] = "sample\nstory.png"
+    summary["palette"][0]["label"] = "dark\ncool\tink"
+    summary["palette"][0]["name"] = "steel\nblue\tink"
+
+    text = render_text_report(summary, title="Title\nName")
+
+    assert text.startswith("Title Name\n")
+    assert "Source: sample story.png\n" in text
+    assert (
+        "1. #112233 | rgb(17, 34, 51) | 50.0% | dark cool ink | "
+        "text white | name steel blue ink\n"
+    ) in text
+
+
+def test_write_text_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.txt"
+
+    write_text_report(sample_summary(), output, title="Palette Story")
+
+    assert output.read_text(encoding="utf-8").startswith("Palette Story\n")
