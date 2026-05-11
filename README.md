@@ -23,6 +23,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Compact console summaries for quick terminal use.
 - Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
+- `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 
@@ -76,6 +77,12 @@ Ignore a flat background color before ranking the palette:
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
 ```
 
+Group nearby sampled colors before ranking:
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
+```
+
 Sort selected swatches from dark to light after extraction:
 
 ```bash
@@ -88,7 +95,7 @@ Sort selected chromatic swatches by hue angle, with grayscale colors after chrom
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
+The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
 
 Create CSS custom properties for use in a stylesheet:
 
@@ -152,7 +159,7 @@ Example palette entry:
 }
 ```
 
-JSON settings include the selected sort mode, for example `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before ranking, so swatch percentages are based only on the remaining sampled pixels.
+JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels.
 
 Example CSV output:
 
@@ -168,7 +175,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
@@ -218,6 +225,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
 - `--sample-limit N`: target sampled pixels for the automatic step when `--sample-step` is omitted. Default: 10000. Must be 1 or greater. If `--sample-step` is provided, the fixed step controls pixel iteration; JSON settings still include the selected `sample_limit` and effective `sample_step`.
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
+- `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
 - `--title TEXT`: title for HTML, Markdown, text, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
@@ -243,7 +251,9 @@ pytest -q
 ```
 
 ## Roadmap
-- Optional perceptual color-space clustering for closer visual grouping than RGB buckets.
+- Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
+- Palette comparison reports that show color-story drift between two images.
+- Small sample fixture gallery for teaching palette extraction and report formats.
 
 ## Contributing
 

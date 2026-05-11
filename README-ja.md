@@ -23,6 +23,7 @@
 - ターミナルで素早く確認できるコンパクトな要約を表示します。
 - `--sample-limit` で自動サンプリングの目標を設定でき、再現性のある確認向けには決定的な `--sample-step` の上書きも使えます。
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
+- `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 
@@ -76,6 +77,12 @@ swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
 ```
 
+順位付けの前に近いサンプリング色をグループ化します。
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
+```
+
 抽出後の選択済みスウォッチを暗い順に並べ替えます。
 
 ```bash
@@ -88,7 +95,7 @@ swatch-story poster.png --colors 6 --sort luminance --html poster-luminance.html
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、読みやすい文字色、コントラスト指針が含まれます。
+HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、読みやすい文字色、コントラスト指針が含まれます。
 
 スタイルシートで使える CSS カスタムプロパティを作成します。
 
@@ -166,7 +173,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
@@ -200,7 +207,7 @@ Columns: 2
 }
 ```
 
-JSON 設定には選択した並べ替えモード、例えば `"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。
+JSON 設定には `cluster_distance` と選択した並べ替えモード、例えば `"cluster_distance": 0` と `"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは任意のクラスタリングと順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。
 
 ## 設定
 
@@ -218,6 +225,7 @@ JSON 設定には選択した並べ替えモード、例えば `"sort": "frequen
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
 - `--sample-limit N`: `--sample-step` が省略された場合に、自動ステップが目標とするサンプリング済みピクセル数を指定します。既定値は 10000 です。1 以上である必要があります。`--sample-step` が指定された場合、固定ステップがピクセル走査を制御しますが、JSON 設定には選択された `sample_limit` と実際の `sample_step` が含まれます。
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
+- `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
 - `--title TEXT`: HTML、Markdown、プレーンテキスト、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
@@ -236,14 +244,16 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作成し、パレット割合、コントラストに基づく文字色、レポート描画、CLI のファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
 ```
 
 ## ロードマップ
-- RGB バケットより視覚的なまとまりに近づける、任意の知覚色空間クラスタリング。
+- CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
+- 2 枚の画像間で色のストーリーの変化を示すパレット比較レポート。
+- パレット抽出と各レポート形式を教えるための小さなサンプル素材ギャラリー。
 
 ## コントリビュート
 

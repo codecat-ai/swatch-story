@@ -27,7 +27,12 @@ def sample_summary() -> dict:
         "source": "sample.png",
         "source_path": "fixtures/sample.png",
         "size": {"width": 2, "height": 1},
-        "settings": {"colors": 2, "sample_step": 1, "color_names": False},
+        "settings": {
+            "colors": 2,
+            "sample_step": 1,
+            "cluster_distance": 0,
+            "color_names": False,
+        },
         "palette": [
             {
                 "rank": 1,
@@ -200,6 +205,8 @@ def test_html_report_renders_contact_sheet_review_metadata() -> None:
     assert "2</dd>" in html
     assert "Sample step</dt>" in html
     assert "Every 1 pixel</dd>" in html
+    assert "Cluster distance</dt>" in html
+    assert "0</dd>" in html
     assert "Color names</dt>" in html
     assert "Included</dd>" in html
     assert "Ignored color</dt>" not in html
@@ -313,7 +320,8 @@ def test_markdown_report_renders_portable_palette_table() -> None:
         "\n"
         "Source: `sample.png`  \n"
         "Size: 2 x 1 px  \n"
-        "Colors: 2\n"
+        "Colors: 2  \n"
+        "Cluster distance: 0\n"
         "\n"
         "| Rank | Color | RGB | Percent | Luminance | Text | Label |\n"
         "| ---: | --- | --- | ---: | ---: | --- | --- |\n"
@@ -356,7 +364,7 @@ def test_text_report_renders_paste_friendly_palette_sheet() -> None:
         "Source: sample.png\n"
         "Image size: 2 x 1 px\n"
         "Settings: colors 2; sample step 1; sample limit unknown; "
-        "sort frequency; ignored color #ffffff; names included\n"
+        "cluster distance 0; sort frequency; ignored color #ffffff; names included\n"
         "\n"
         "Swatches:\n"
         "1. #112233 | rgb(17, 34, 51) | 50.0% | dark | text white | name blue\n"

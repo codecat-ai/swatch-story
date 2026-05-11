@@ -133,6 +133,44 @@ def test_cli_ignore_color_updates_palette_json_and_console(
     assert "#0000ff" in console
 
 
+def test_cli_cluster_distance_updates_palette_json_and_console(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-cluster.png"
+    image = Image.new("RGB", (4, 1))
+    image.putdata(
+        [
+            (100, 100, 100),
+            (100, 100, 100),
+            (104, 101, 100),
+            (20, 20, 20),
+        ]
+    )
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--cluster-distance",
+            "8",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["cluster_distance"] == 8
+    assert [entry["hex"] for entry in summary["palette"]] == ["#656464", "#141414"]
+    assert [entry["count"] for entry in summary["palette"]] == [3, 1]
+    assert "#656464" in capsys.readouterr().out
+
+
 def test_cli_sort_luminance_updates_json_and_console_order(
     tmp_path: Path, capsys
 ) -> None:
@@ -189,6 +227,19 @@ def test_cli_rejects_invalid_sort_choice(tmp_path: Path, capsys) -> None:
 
     assert exc_info.value.code == 2
     assert "invalid choice: 'brightness'" in capsys.readouterr().err
+
+
+def test_cli_rejects_invalid_cluster_distance_with_argparse(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--cluster-distance", "256"])
+
+    assert exc_info.value.code == 2
+    assert "--cluster-distance must be between 0 and 255" in capsys.readouterr().err
 
 
 def test_cli_default_json_omits_color_name_hints(tmp_path: Path, capsys) -> None:
@@ -423,7 +474,7 @@ def test_cli_writes_text_report_and_prints_summary(tmp_path: Path, capsys) -> No
     assert "Source: cli.png\n" in text
     assert (
         "Settings: colors 2; sample step 1; sample limit 10000; "
-        "sort frequency; ignored color none; names included\n"
+        "cluster distance 0; sort frequency; ignored color none; names included\n"
     ) in text
     assert "1. #0000ff | rgb(0, 0, 255) | 50.0% | dark | text white | name blue" in text
     assert "#ff0000" in capsys.readouterr().out
