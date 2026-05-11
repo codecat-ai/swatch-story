@@ -7,6 +7,8 @@ from pathlib import Path
 
 from swatch_story.palette import (
     DEFAULT_SAMPLE_LIMIT,
+    MAX_CLUSTER_DISTANCE,
+    MIN_CLUSTER_DISTANCE,
     VALID_SORTS,
     PaletteError,
     summarize_image,
@@ -21,6 +23,21 @@ from swatch_story.report import (
     write_markdown_report,
     write_text_report,
 )
+
+
+def cluster_distance_value(value: str) -> int:
+    try:
+        distance = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "--cluster-distance must be an integer"
+        ) from exc
+    if distance < MIN_CLUSTER_DISTANCE or distance > MAX_CLUSTER_DISTANCE:
+        raise argparse.ArgumentTypeError(
+            f"--cluster-distance must be between {MIN_CLUSTER_DISTANCE} "
+            f"and {MAX_CLUSTER_DISTANCE}"
+        )
+    return distance
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,6 +89,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=("Exclude sampled pixels matching #rrggbb or rrggbb before ranking."),
     )
     parser.add_argument(
+        "--cluster-distance",
+        type=cluster_distance_value,
+        default=0,
+        metavar="N",
+        help=(
+            "Group similar sampled RGB colors before ranking when N is 1-255. "
+            "Default: 0, exact RGB buckets."
+        ),
+    )
+    parser.add_argument(
         "--sort",
         choices=VALID_SORTS,
         default="frequency",
@@ -105,6 +132,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sample_limit=args.sample_limit,
             include_color_names=args.names,
             ignore_color=args.ignore_color,
+            cluster_distance=args.cluster_distance,
             sort=args.sort,
         )
     except PaletteError as exc:

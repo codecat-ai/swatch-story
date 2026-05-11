@@ -176,6 +176,8 @@ def render_markdown_report(
     source = markdown_escape(str(summary["source"]))
     width = summary["size"]["width"]
     height = summary["size"]["height"]
+    settings = summary.get("settings", {})
+    cluster_distance = markdown_escape(str(settings.get("cluster_distance", 0)))
     palette = summary["palette"]
     include_names = any("name" in entry for entry in palette)
     header = "| Rank | Color | RGB | Percent | Luminance | Text | Label |"
@@ -188,7 +190,8 @@ def render_markdown_report(
         "",
         f"Source: `{source}`  ",
         f"Size: {width} x {height} px  ",
-        f"Colors: {len(palette)}",
+        f"Colors: {len(palette)}  ",
+        f"Cluster distance: {cluster_distance}",
         "",
         header,
         divider,
@@ -234,6 +237,7 @@ def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
     colors = _single_line(settings.get("colors", len(palette)))
     sample_step = _single_line(settings.get("sample_step", "unknown"))
     sample_limit = _single_line(settings.get("sample_limit", "unknown"))
+    cluster_distance = _single_line(settings.get("cluster_distance", 0))
     sort = _single_line(settings.get("sort", "frequency"))
     ignored_color = _single_line(settings.get("ignore_color", "none"))
     names_enabled = bool(
@@ -247,7 +251,8 @@ def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
         f"Image size: {width} x {height} px",
         (
             f"Settings: colors {colors}; sample step {sample_step}; "
-            f"sample limit {sample_limit}; sort {sort}; "
+            f"sample limit {sample_limit}; "
+            f"cluster distance {cluster_distance}; sort {sort}; "
             f"ignored color {ignored_color}; names {names_label}"
         ),
         "",
@@ -283,6 +288,7 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
     height = summary["size"]["height"]
     settings = summary.get("settings", {})
     colors = escape(str(settings.get("colors", len(summary["palette"]))))
+    cluster_distance = escape(str(settings.get("cluster_distance", 0)))
     sample_step = settings.get("sample_step")
     sample_step_label = (
         f"Every {escape(str(sample_step))} pixel"
@@ -424,6 +430,10 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
       <div>
         <dt>Sample step</dt>
         <dd>{sample_step_label}</dd>
+      </div>
+      <div>
+        <dt>Cluster distance</dt>
+        <dd>{cluster_distance}</dd>
       </div>
       <div>
         <dt>Color names</dt>

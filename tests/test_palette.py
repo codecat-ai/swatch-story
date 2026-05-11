@@ -41,6 +41,73 @@ def test_extract_palette_reports_dominant_colors_and_percentages(
     assert [entry.rank for entry in palette] == [1, 2]
 
 
+def test_extract_palette_default_cluster_distance_keeps_exact_rgb_behavior(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "exact.png"
+    save_blocks(
+        image_path,
+        [
+            (100, 100, 100),
+            (100, 100, 100),
+            (104, 101, 100),
+            (20, 20, 20),
+        ],
+    )
+
+    palette = extract_palette(image_path, colors=3, sample_step=1)
+
+    assert [entry.rgb for entry in palette] == [
+        (100, 100, 100),
+        (20, 20, 20),
+        (104, 101, 100),
+    ]
+    assert [entry.count for entry in palette] == [2, 1, 1]
+
+
+def test_extract_palette_clusters_nearby_colors_when_distance_permits(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "cluster.png"
+    save_blocks(
+        image_path,
+        [
+            (100, 100, 100),
+            (100, 100, 100),
+            (104, 101, 100),
+            (20, 20, 20),
+        ],
+    )
+
+    palette = extract_palette(image_path, colors=2, sample_step=1, cluster_distance=8)
+
+    assert [entry.rgb for entry in palette] == [(101, 100, 100), (20, 20, 20)]
+    assert [entry.count for entry in palette] == [3, 1]
+    assert [entry.percent for entry in palette] == [75.0, 25.0]
+
+
+def test_extract_palette_does_not_cluster_below_threshold(tmp_path: Path) -> None:
+    image_path = tmp_path / "below-threshold.png"
+    save_blocks(
+        image_path,
+        [
+            (100, 100, 100),
+            (100, 100, 100),
+            (104, 101, 100),
+            (20, 20, 20),
+        ],
+    )
+
+    palette = extract_palette(image_path, colors=3, sample_step=1, cluster_distance=3)
+
+    assert [entry.rgb for entry in palette] == [
+        (100, 100, 100),
+        (20, 20, 20),
+        (104, 101, 100),
+    ]
+    assert [entry.count for entry in palette] == [2, 1, 1]
+
+
 def test_extract_palette_ignores_exact_hex_before_ranking(
     tmp_path: Path,
 ) -> None:
@@ -61,6 +128,31 @@ def test_extract_palette_ignores_exact_hex_before_ranking(
     )
 
     assert [entry.hex for entry in palette] == ["#0000ff", "#ff0000"]
+    assert [entry.count for entry in palette] == [2, 1]
+    assert [entry.percent for entry in palette] == [66.67, 33.33]
+
+
+def test_extract_palette_ignores_exact_hex_before_clustering(tmp_path: Path) -> None:
+    image_path = tmp_path / "ignore-before-cluster.png"
+    save_blocks(
+        image_path,
+        [
+            (255, 255, 255),
+            (250, 250, 250),
+            (250, 250, 250),
+            (10, 10, 10),
+        ],
+    )
+
+    palette = extract_palette(
+        image_path,
+        colors=2,
+        sample_step=1,
+        ignore_color="#ffffff",
+        cluster_distance=12,
+    )
+
+    assert [entry.rgb for entry in palette] == [(250, 250, 250), (10, 10, 10)]
     assert [entry.count for entry in palette] == [2, 1]
     assert [entry.percent for entry in palette] == [66.67, 33.33]
 
@@ -95,6 +187,16 @@ def test_extract_palette_rejects_invalid_ignore_color(tmp_path: Path) -> None:
 
     with pytest.raises(PaletteError, match="--ignore-color must be"):
         extract_palette(image_path, colors=2, sample_step=1, ignore_color="#ffffgg")
+
+
+def test_extract_palette_rejects_invalid_cluster_distance(tmp_path: Path) -> None:
+    image_path = tmp_path / "invalid-cluster.png"
+    save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
+
+    with pytest.raises(
+        PaletteError, match="--cluster-distance must be between 0 and 255"
+    ):
+        extract_palette(image_path, colors=2, sample_step=1, cluster_distance=256)
 
 
 def test_best_text_color_prefers_readable_foreground() -> None:
@@ -133,6 +235,7 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
     assert summary["size"] == {"width": 2, "height": 1}
     assert summary["settings"]["sample_limit"] == 10_000
     assert summary["settings"]["sort"] == "frequency"
+    assert summary["settings"]["cluster_distance"] == 0
     assert summary["palette"][0].keys() == {
         "rank",
         "hex",
@@ -265,3 +368,34 @@ def test_summarize_image_can_include_optional_color_names(tmp_path: Path) -> Non
     )
 
     assert [entry["name"] for entry in summary["palette"]] == ["blue", "red"]
+
+
+def test_summarize_image_clustered_palette_keeps_sort_and_names(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "cluster-summary.png"
+    save_blocks(
+        image_path,
+        [
+            (250, 0, 0),
+            (250, 0, 0),
+            (255, 4, 0),
+            (0, 0, 250),
+            (0, 0, 255),
+        ],
+    )
+
+    summary = summarize_image(
+        image_path,
+        colors=2,
+        sample_step=1,
+        cluster_distance=8,
+        include_color_names=True,
+        sort="hue",
+    )
+
+    assert summary["settings"]["cluster_distance"] == 8
+    assert [entry["hex"] for entry in summary["palette"]] == ["#fc0100", "#0000fc"]
+    assert [entry["count"] for entry in summary["palette"]] == [3, 2]
+    assert [entry["percent"] for entry in summary["palette"]] == [60.0, 40.0]
+    assert [entry["name"] for entry in summary["palette"]] == ["red", "blue"]

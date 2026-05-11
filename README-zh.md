@@ -23,6 +23,7 @@
 - 在终端中输出紧凑摘要，便于快速查看。
 - 通过 `--sample-limit` 配置自动采样目标，同时保留确定性的 `--sample-step` 覆盖，方便可重复审阅。
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
+- `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 
@@ -76,6 +77,12 @@ swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
 ```
 
+在排名前把接近的采样颜色分组：
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
+```
+
 在提取后把已选色块按从暗到亮排序：
 
 ```bash
@@ -88,7 +95,7 @@ swatch-story poster.png --colors 6 --sort luminance --html poster-luminance.html
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、可读文字颜色和对比度建议。
+HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、可读文字颜色和对比度建议。
 
 创建可在样式表中使用的 CSS 自定义属性：
 
@@ -166,7 +173,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
@@ -200,7 +207,7 @@ Columns: 2
 }
 ```
 
-JSON 设置会包含所选排序模式，例如 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在排名前移除，因此色块占比只基于剩余采样像素计算。
+JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster_distance": 0` 和 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在可选聚类和排名前移除，因此色块占比只基于剩余采样像素计算。
 
 ## 配置
 
@@ -218,6 +225,7 @@ JSON 设置会包含所选排序模式，例如 `"sort": "frequency"`。使用 `
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
 - `--sample-limit N`：在未提供 `--sample-step` 时，设置自动步长的目标采样像素数。默认值：10000。必须大于等于 1。如果提供了 `--sample-step`，固定步长会控制像素迭代；JSON 设置仍会包含所选的 `sample_limit` 和实际的 `sample_step`。
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
+- `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
 - `--title TEXT`：HTML、Markdown、纯文本、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
@@ -236,14 +244,16 @@ python -m build
 
 ## 测试
 
-测试套件会构造很小的合成图片，并验证调色板占比、对比文字选择、报告渲染和 CLI 文件输出。
+测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染和 CLI 文件输出。
 
 ```bash
 pytest -q
 ```
 
 ## 路线图
-- 增加可选的感知色彩空间聚类，让视觉分组比 RGB 分桶更接近人眼感受。
+- 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
+- 调色板对比报告，用于展示两张图像之间的色彩故事变化。
+- 小型示例素材库，用于教学调色板提取和各种报告格式。
 
 ## 贡献
 
