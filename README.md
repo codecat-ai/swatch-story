@@ -26,7 +26,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
-- Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score.
+- Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, or standalone HTML output.
 
 ## Installation
 
@@ -96,13 +96,15 @@ Sort selected chromatic swatches by hue angle, with grayscale colors after chrom
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-Compare two local images and write a JSON drift report:
+Compare two local images and write JSON and HTML drift reports:
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html
 ```
 
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap.
+
+The compare HTML report is a standalone local file for browser review. It includes escaped before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, clear `None` states for empty change lists, and the drift score. You can request `--json` and `--html` in the same compare command.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
 
@@ -260,7 +262,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--title TEXT`: title for HTML, Markdown, text, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, and `--html PATH` writes a standalone HTML comparison report. Both outputs can be requested together.
 
 The MVP does not read a config file and does not fetch remote images.
 
@@ -285,7 +287,6 @@ pytest -q
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
 - Small sample fixture gallery for teaching palette extraction and report formats.
-- Optional HTML comparison report for side-by-side palette drift review.
 - Configurable output precision for reports that need fewer decimal places.
 
 ## Contributing

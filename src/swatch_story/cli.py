@@ -8,6 +8,7 @@ from pathlib import Path
 from swatch_story.compare import (
     compare_summaries,
     render_compare_text,
+    write_compare_html_report,
     write_compare_json,
 )
 from swatch_story.palette import (
@@ -92,6 +93,9 @@ def build_compare_parser() -> argparse.ArgumentParser:
     parser.add_argument("after_image", help="Local image path for the later image")
     add_palette_options(parser)
     parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
+    parser.add_argument(
+        "--html", dest="html_path", help="Write standalone HTML report to PATH"
+    )
     return parser
 
 
@@ -217,6 +221,8 @@ def compare_main(argv: Sequence[str]) -> int:
     report = compare_summaries(before_summary, after_summary)
     if args.json_path:
         write_compare_json(report, args.json_path)
+    if args.html_path:
+        write_compare_html_report(report, args.html_path)
     print(render_compare_text(report), end="")
     return 0
 

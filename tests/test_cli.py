@@ -81,6 +81,53 @@ def test_cli_compare_prints_report_and_writes_json(tmp_path: Path, capsys) -> No
     assert report["drift_score"] == 50.0
 
 
+def test_cli_compare_writes_html_and_json_reports(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before <one>.png"
+    before = Image.new("RGB", (3, 1))
+    before.putdata([(255, 0, 0), (0, 0, 255), (0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after & two.png"
+    after = Image.new("RGB", (3, 1))
+    after.putdata([(0, 0, 255), (0, 255, 0), (255, 255, 0)])
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+    html_path = tmp_path / "nested" / "compare.html"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+            "--html",
+            str(html_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(json_path.read_text(encoding="utf-8"))["drift_score"] == 50.0
+    html = html_path.read_text(encoding="utf-8")
+    assert "Palette Drift Report" in html
+    assert "before &lt;one&gt;.png" in html
+    assert "after &amp; two.png" in html
+    assert "Before dominant</dt>" in html
+    assert "After dominant</dt>" in html
+    assert "Shared colors" in html
+    assert "#0000ff" in html
+    assert "Added colors" in html
+    assert "#ffff00" in html
+    assert "Removed colors" in html
+    assert "#ff0000" in html
+    assert "Drift score</dt>" in html
+    assert "50.0%</dd>" in html
+    assert "Drift score: 50.0%" in capsys.readouterr().out
+
+
 def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "before.png"
     before = Image.new("RGB", (4, 1))

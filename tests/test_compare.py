@@ -1,4 +1,8 @@
-from swatch_story.compare import compare_summaries, render_compare_text
+from swatch_story.compare import (
+    compare_summaries,
+    render_compare_html_report,
+    render_compare_text,
+)
 
 
 def summary(source: str, colors: list[str]) -> dict:
@@ -64,3 +68,45 @@ def test_render_compare_text_is_concise_and_human_readable() -> None:
     assert "Added colors: #333333" in text
     assert "Removed colors: #111111" in text
     assert "Drift score: 66.67%" in text
+
+
+def test_render_compare_html_report_contains_palette_drift_and_escapes_text() -> None:
+    report = compare_summaries(
+        summary('before"><script>.png', ["#111111", "#222222"]),
+        summary("after & final.png", ["#222222", "#333333"]),
+    )
+
+    html = render_compare_html_report(report, title="<Drift & Review>")
+
+    assert html.startswith("<!doctype html>\n")
+    assert "&lt;Drift &amp; Review&gt;" in html
+    assert "<Drift & Review>" not in html
+    assert "before&quot;&gt;&lt;script&gt;.png" in html
+    assert "fixtures/before&quot;&gt;&lt;script&gt;.png" in html
+    assert "after &amp; final.png" in html
+    assert "<script>" not in html
+    assert "Before dominant</dt>" in html
+    assert "#111111</dd>" in html
+    assert "After dominant</dt>" in html
+    assert "#222222</dd>" in html
+    assert "Shared colors" in html
+    assert "#222222" in html
+    assert "Added colors" in html
+    assert "#333333" in html
+    assert "Removed colors" in html
+    assert "#111111" in html
+    assert "Drift score</dt>" in html
+    assert "66.67%</dd>" in html
+
+
+def test_render_compare_html_report_renders_empty_drift_lists_as_none() -> None:
+    report = compare_summaries(
+        summary("before.png", ["#111111", "#222222"]),
+        summary("after.png", ["#111111", "#222222"]),
+    )
+
+    html = render_compare_html_report(report)
+
+    assert "Added colors" in html
+    assert "Removed colors" in html
+    assert html.count(">None<") >= 2
