@@ -38,6 +38,99 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_compare_prints_report_and_writes_json(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (3, 1))
+    before.putdata([(255, 0, 0), (0, 0, 255), (0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (3, 1))
+    after.putdata([(0, 0, 255), (0, 255, 0), (255, 255, 0)])
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    console = capsys.readouterr().out
+    assert f"Palette comparison: {before_path} -> {after_path}" in console
+    assert "Before dominant: #0000ff" in console
+    assert "After dominant: #0000ff" in console
+    assert "Shared colors: #0000ff, #00ff00" in console
+    assert "Added colors: #ffff00" in console
+    assert "Removed colors: #ff0000" in console
+    assert "Drift score: 50.0%" in console
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["before"]["source_path"] == str(before_path)
+    assert report["after"]["source_path"] == str(after_path)
+    assert report["shared"] == ["#0000ff", "#00ff00"]
+    assert report["added"] == ["#ffff00"]
+    assert report["removed"] == ["#ff0000"]
+    assert report["drift_score"] == 50.0
+
+
+def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (4, 1))
+    before.putdata([(255, 255, 255), (255, 0, 0), (0, 0, 255), (0, 0, 255)])
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (4, 1))
+    after.putdata([(255, 255, 255), (0, 0, 255), (0, 128, 128), (0, 128, 128)])
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--ignore-color",
+            "ffffff",
+            "--sort",
+            "hue",
+            "--names",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["before"]["settings"]["ignore_color"] == "#ffffff"
+    assert report["before"]["settings"]["sort"] == "hue"
+    assert report["before"]["palette"][0]["name"] == "red"
+    assert report["after"]["palette"][0]["name"] == "teal"
+    assert "Added colors: #008080" in capsys.readouterr().out
+
+
+def test_cli_compare_returns_palette_error_exit_code(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "missing.png"
+    after_path = tmp_path / "after.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(after_path)
+
+    exit_code = main(["compare", str(before_path), str(after_path)])
+
+    assert exit_code == 2
+    assert "swatch-story: image not found:" in capsys.readouterr().err
+
+
 def test_cli_html_report_includes_settings_and_names(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli <story>.png"
     image = Image.new("RGB", (2, 1))

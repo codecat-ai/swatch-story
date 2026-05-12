@@ -5,6 +5,11 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from swatch_story.compare import (
+    compare_summaries,
+    render_compare_text,
+    write_compare_json,
+)
 from swatch_story.palette import (
     DEFAULT_SAMPLE_LIMIT,
     MAX_CLUSTER_DISTANCE,
@@ -49,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("image", help="Local image path")
-    parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
+    add_palette_options(parser)
     parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
     parser.add_argument("--csv", dest="csv_path", help="Write CSV report to PATH")
     parser.add_argument(
@@ -70,6 +75,28 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--ase", dest="ase_path", help="Write Adobe Swatch Exchange .ase to PATH"
     )
+    parser.add_argument(
+        "--title",
+        default="Swatch Story",
+        help="Title for HTML, Markdown, text, GIMP palette, and ASE output",
+    )
+    return parser
+
+
+def build_compare_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="swatch-story compare",
+        description="Compare palette drift between two local images.",
+    )
+    parser.add_argument("before_image", help="Local image path for the earlier image")
+    parser.add_argument("after_image", help="Local image path for the later image")
+    add_palette_options(parser)
+    parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
+    return parser
+
+
+def add_palette_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
     parser.add_argument(
         "--sample-step",
         type=int,
@@ -108,19 +135,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--title",
-        default="Swatch Story",
-        help="Title for HTML, Markdown, text, GIMP palette, and ASE output",
-    )
-    parser.add_argument(
         "--names",
         action="store_true",
         help="Include approximate common color-name hints in reports and summaries.",
     )
-    return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["compare"]:
+        return compare_main(argv[1:])
+
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -157,6 +182,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_ase_report(summary, args.ase_path, title=args.title)
 
     print_summary(summary)
+    return 0
+
+
+def compare_main(argv: Sequence[str]) -> int:
+    parser = build_compare_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        before_summary = summarize_image(
+            Path(args.before_image),
+            colors=args.colors,
+            sample_step=args.sample_step,
+            sample_limit=args.sample_limit,
+            include_color_names=args.names,
+            ignore_color=args.ignore_color,
+            cluster_distance=args.cluster_distance,
+            sort=args.sort,
+        )
+        after_summary = summarize_image(
+            Path(args.after_image),
+            colors=args.colors,
+            sample_step=args.sample_step,
+            sample_limit=args.sample_limit,
+            include_color_names=args.names,
+            ignore_color=args.ignore_color,
+            cluster_distance=args.cluster_distance,
+            sort=args.sort,
+        )
+    except PaletteError as exc:
+        print(f"swatch-story: {exc}", file=sys.stderr)
+        return 2
+
+    report = compare_summaries(before_summary, after_summary)
+    if args.json_path:
+        write_compare_json(report, args.json_path)
+    print(render_compare_text(report), end="")
     return 0
 
 
