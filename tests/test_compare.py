@@ -1,6 +1,7 @@
 from swatch_story.compare import (
     compare_summaries,
     render_compare_html_report,
+    render_compare_markdown_report,
     render_compare_text,
 )
 
@@ -110,3 +111,45 @@ def test_render_compare_html_report_renders_empty_drift_lists_as_none() -> None:
     assert "Added colors" in html
     assert "Removed colors" in html
     assert html.count(">None<") >= 2
+
+
+def test_render_compare_markdown_report_contains_palette_drift() -> None:
+    report = compare_summaries(
+        summary("before.png", ["#111111", "#222222"]),
+        summary("after.png", ["#222222", "#333333"]),
+    )
+
+    markdown = render_compare_markdown_report(report)
+
+    assert markdown == (
+        "# Palette Drift Report\n"
+        "\n"
+        "| Field | Value |\n"
+        "| --- | --- |\n"
+        "| Before source name | before.png |\n"
+        "| Before source path | fixtures/before.png |\n"
+        "| After source name | after.png |\n"
+        "| After source path | fixtures/after.png |\n"
+        "| Before dominant colors | `#111111`, `#222222` |\n"
+        "| After dominant colors | `#222222`, `#333333` |\n"
+        "| Shared colors | `#222222` |\n"
+        "| Added colors | `#333333` |\n"
+        "| Removed colors | `#111111` |\n"
+        "| Drift score | 66.67% |\n"
+        "\n"
+    )
+
+
+def test_render_compare_markdown_report_escapes_table_breaking_text() -> None:
+    report = compare_summaries(
+        summary("before|draft\none.png", ["#111111"]),
+        summary("after|final\ntwo.png", ["#111111"]),
+    )
+
+    markdown = render_compare_markdown_report(report)
+
+    assert "before\\|draft<br>one.png" in markdown
+    assert "fixtures/before\\|draft<br>one.png" in markdown
+    assert "after\\|final<br>two.png" in markdown
+    assert "| Added colors | None |" in markdown
+    assert "| Removed colors | None |" in markdown

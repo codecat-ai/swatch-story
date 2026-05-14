@@ -183,6 +183,49 @@ def test_cli_compare_writes_html_and_json_reports(tmp_path: Path, capsys) -> Non
     assert "Drift score: 50.0%" in capsys.readouterr().out
 
 
+def test_cli_compare_writes_markdown_and_json_reports(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (3, 1))
+    before.putdata([(255, 0, 0), (0, 0, 255), (0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (3, 1))
+    after.putdata([(0, 0, 255), (0, 255, 0), (255, 255, 0)])
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+    markdown_path = tmp_path / "nested" / "compare.md"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+            "--markdown",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(json_path.read_text(encoding="utf-8"))["drift_score"] == 50.0
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# Palette Drift Report\n")
+    assert f"| Before source path | {before_path} |" in markdown
+    assert f"| After source path | {after_path} |" in markdown
+    assert "| Before dominant colors | `#0000ff`, `#00ff00`, `#ff0000` |" in markdown
+    assert "| After dominant colors | `#0000ff`, `#00ff00`, `#ffff00` |" in markdown
+    assert "| Shared colors | `#0000ff`, `#00ff00` |" in markdown
+    assert "| Added colors | `#ffff00` |" in markdown
+    assert "| Removed colors | `#ff0000` |" in markdown
+    assert "| Drift score | 50.0% |" in markdown
+    assert "Drift score: 50.0%" in capsys.readouterr().out
+
+
 def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "before.png"
     before = Image.new("RGB", (4, 1))

@@ -27,7 +27,7 @@
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
 - `--precision N` 可把 JSON、CSV、Markdown、纯文本、HTML 和终端摘要中的报告占比与相对亮度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
-- 两张本地图像的调色板对比报告，包含主色变化、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON 或独立 HTML。
+- 两张本地图像的调色板对比报告，包含主色变化、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML 或便携 Markdown。
 
 ## 安装
 
@@ -103,15 +103,15 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --html poster-colors.html
 ```
 
-对比两张本地图像，并写入 JSON 和 HTML 漂移报告：
+对比两张本地图像，并写入 JSON、HTML 和 Markdown 漂移报告：
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html --markdown palette-drift.md
 ```
 
 `compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。
 
-对比 HTML 报告是可在浏览器中审阅的独立本地文件。它会包含已转义的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json` 和 `--html`。
+对比 HTML 报告是可在浏览器中审阅的独立本地文件。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。两者都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--html` 和 `--markdown`。
 
 HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、可读文字颜色和对比度建议。
 
@@ -270,7 +270,7 @@ JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster
 - `--title TEXT`：HTML、Markdown、纯文本、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--html PATH` 会写入独立 HTML 对比报告。两个输出可以同时请求。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告。这些输出可以同时请求。
 
 MVP 不读取配置文件，也不会获取远程图片。
 

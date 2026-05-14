@@ -10,6 +10,7 @@ from swatch_story.compare import (
     render_compare_text,
     write_compare_html_report,
     write_compare_json,
+    write_compare_markdown_report,
 )
 from swatch_story.palette import (
     DEFAULT_SAMPLE_LIMIT,
@@ -115,6 +116,9 @@ def build_compare_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
     parser.add_argument(
         "--html", dest="html_path", help="Write standalone HTML report to PATH"
+    )
+    parser.add_argument(
+        "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
     )
     return parser
 
@@ -258,6 +262,8 @@ def compare_main(argv: Sequence[str]) -> int:
         write_compare_json(report, args.json_path)
     if args.html_path:
         write_compare_html_report(report, args.html_path)
+    if args.markdown_path:
+        write_compare_markdown_report(report, args.markdown_path)
     print(render_compare_text(report), end="")
     return 0
 

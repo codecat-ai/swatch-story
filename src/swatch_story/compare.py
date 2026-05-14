@@ -4,7 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from swatch_story.report import write_json_report
+from swatch_story.report import markdown_escape, write_json_report
 
 
 def compare_summaries(
@@ -210,6 +210,48 @@ def write_compare_html_report(report: dict[str, Any], output_path: str | Path) -
     path.write_text(render_compare_html_report(report), encoding="utf-8")
 
 
+def render_compare_markdown_report(
+    report: dict[str, Any], *, title: str = "Palette Drift Report"
+) -> str:
+    before = report["before"]
+    after = report["after"]
+    rows = [
+        ("Before source name", str(before["source"])),
+        ("Before source path", str(before["source_path"])),
+        ("After source name", str(after["source"])),
+        ("After source path", str(after["source_path"])),
+        (
+            "Before dominant colors",
+            _format_markdown_color_list([entry["hex"] for entry in before["palette"]]),
+        ),
+        (
+            "After dominant colors",
+            _format_markdown_color_list([entry["hex"] for entry in after["palette"]]),
+        ),
+        ("Shared colors", _format_markdown_color_list(report["shared"])),
+        ("Added colors", _format_markdown_color_list(report["added"])),
+        ("Removed colors", _format_markdown_color_list(report["removed"])),
+        ("Drift score", f"{report['drift_score']}%"),
+    ]
+    lines = [
+        f"# {markdown_escape(title)}",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+    ]
+    for label, value in rows:
+        lines.append(f"| {markdown_escape(label)} | {_format_markdown_value(value)} |")
+    return "\n".join(lines) + "\n\n"
+
+
+def write_compare_markdown_report(
+    report: dict[str, Any], output_path: str | Path
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_compare_markdown_report(report), encoding="utf-8")
+
+
 def write_compare_json(report: dict[str, Any], output_path: str | Path) -> None:
     write_json_report(report, output_path)
 
@@ -224,6 +266,16 @@ def _format_color_list(values: list[str]) -> str:
 
 def _format_html_optional_color(value: str | None) -> str:
     return escape(value) if value is not None else "None"
+
+
+def _format_markdown_color_list(values: list[str]) -> str:
+    if not values:
+        return "None"
+    return ", ".join(f"`{markdown_escape(value)}`" for value in values)
+
+
+def _format_markdown_value(value: str) -> str:
+    return markdown_escape(value)
 
 
 def _render_compare_side(label: str, side: dict[str, Any]) -> str:
