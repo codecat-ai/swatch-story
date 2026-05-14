@@ -368,6 +368,56 @@ def test_cli_compare_writes_text_markdown_and_json_reports(
     assert "Drift score: 50.0%" in capsys.readouterr().out
 
 
+def test_cli_compare_writes_csv_and_still_prints_report(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (3, 1))
+    before.putdata([(255, 0, 0), (0, 0, 255), (0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (3, 1))
+    after.putdata([(0, 0, 255), (0, 255, 0), (255, 255, 0)])
+    after.save(after_path)
+    csv_path = tmp_path / "nested" / "compare.csv"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--csv",
+            str(csv_path),
+        ]
+    )
+
+    assert exit_code == 0
+    console = capsys.readouterr().out
+    assert f"Palette comparison: {before_path} -> {after_path}" in console
+    assert "Shared colors: #0000ff, #00ff00" in console
+    assert "Added colors: #ffff00" in console
+    assert "Removed colors: #ff0000" in console
+    assert "Drift score: 50.0%" in console
+    assert csv_path.read_text(encoding="utf-8") == (
+        "section,field,value,category,hex,before_percent,after_percent,"
+        "delta_percent\n"
+        f"metadata,before_source,{before_path},,,,,\n"
+        f"metadata,after_source,{after_path},,,,,\n"
+        "metadata,drift_score,50.0,,,,,\n"
+        "metadata,dominant_before_hex,#0000ff,,,,,\n"
+        "metadata,dominant_after_hex,#0000ff,,,,,\n"
+        "metadata,shared_count,2,,,,,\n"
+        "metadata,added_count,1,,,,,\n"
+        "metadata,removed_count,1,,,,,\n"
+        "color,,,shared,#0000ff,33.33,33.33,0.0\n"
+        "color,,,shared,#00ff00,33.33,33.33,0.0\n"
+        "color,,,added,#ffff00,,33.33,\n"
+        "color,,,removed,#ff0000,33.33,,\n"
+    )
+
+
 def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "before.png"
     before = Image.new("RGB", (4, 1))

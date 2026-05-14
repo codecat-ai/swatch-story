@@ -119,15 +119,15 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
-2 枚のローカル画像を比較し、JSON、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
+2 枚のローカル画像を比較し、JSON、CSV、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
 `compare` コマンドは、前後の画像パス、それぞれの主要色、共有色、追加色、削除色、ドリフトスコアを含む簡潔なターミナルレポートを表示します。スコアは選択済みパレットの HEX 値のうち変化した割合で、`100 * (1 - shared / union)` として計算します。`0%` は選択済みパレットの HEX 値が同一であること、`100%` は重なりがないことを意味します。
 
-比較 HTML レポートは、ブラウザーで確認できる単体のローカルファイルです。比較 Markdown レポートは、メモ、Issue コメント、デザインドキュメントに向いたポータブルな表です。比較プレーンテキストレポートは、メール、チケット、レビューログ向けの決定的な UTF-8 ドリフトシートです。これらのレポートは、安全に表現された前後ソース名とパス、各側の主要色、共有色、追加色、削除色、空の変更リストに対する明確な `None` 状態、ドリフトスコアを含みます。同じ `compare` コマンドで `--json`、`--html`、`--markdown`、`--text` を同時に指定できます。
+比較 CSV レポートは、スプレッドシートでパレットドリフトを確認するための決定的な UTF-8 表です。比較 HTML レポートは、ブラウザーで確認できる単体のローカルファイルです。比較 Markdown レポートは、メモ、Issue コメント、デザインドキュメントに向いたポータブルな表です。比較プレーンテキストレポートは、メール、チケット、レビューログ向けの決定的な UTF-8 ドリフトシートです。これらのレポートは、安全に表現された前後ソース名とパス、各側の主要色、共有色、追加色、削除色、空の変更リストに対する明確な `None` 状態、ドリフトスコアを含みます。同じ `compare` コマンドで `--json`、`--csv`、`--html`、`--markdown`、`--text` を同時に指定できます。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、読みやすい文字色、コントラスト指針が含まれます。
 
@@ -312,7 +312,7 @@ Drift score: 66.67%
 - `--title TEXT`: HTML、Markdown、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータと共有/追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
 `swatch-story gallery OUT_DIR [--no-index] [--force]` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドを含む Markdown `README.md` gallery も生成します。`--force` がない限り、既存の gallery ファイルは上書きしません。
 
