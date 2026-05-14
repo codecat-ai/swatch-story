@@ -25,6 +25,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
 - `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
+- `--precision N` formats report percentages and relative luminance values with 0 to 6 decimal places for JSON, CSV, Markdown, text, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, or standalone HTML output.
 
@@ -94,6 +95,12 @@ Sort selected chromatic swatches by hue angle, with grayscale colors after chrom
 
 ```bash
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
+```
+
+Round report percentages and relative luminance values for compact review output:
+
+```bash
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --html poster-colors.html
 ```
 
 Compare two local images and write JSON and HTML drift reports:
@@ -259,6 +266,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
 - `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
+- `--precision N`: format user-facing report percentages and relative luminance values with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, CSV, Markdown, text, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
 - `--title TEXT`: title for HTML, Markdown, text, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
@@ -287,7 +295,7 @@ pytest -q
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
 - Small sample fixture gallery for teaching palette extraction and report formats.
-- Configurable output precision for reports that need fewer decimal places.
+- Optional side-by-side palette preview thumbnails in HTML reports for quicker visual review.
 
 ## Contributing
 
