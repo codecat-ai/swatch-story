@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、貼り付けやすいプレーンテキスト、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、貼り付けやすいプレーンテキスト、単体 SVG スウォッチシート、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -17,6 +17,7 @@
 - CSS カスタムプロパティ出力には、HEX、RGB の組、読みやすい文字色の変数が含まれます。
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
 - プレーンテキストのパレットシートには、元ファイルのメタデータ、抽出設定、メール、チケット、授業メモに貼り付けやすいスウォッチごとの 1 行が含まれます。
+- 単体 SVG スウォッチシートには、元ファイルのメタデータ、抽出設定、色ブロック、HEX 値、任意の名前、割合、輝度、ラベル、読みやすい文字色の指針が含まれ、ドキュメントやスライドに使いやすくなっています。
 - デザインツールと連携しやすい、決定的な GIMP `.gpl` パレットを書き出します。
 - レポートタイトルでグループ化した RGB スウォッチを含む、決定的な Adobe Swatch Exchange `.ase` を書き出します。
 - 画像メタデータ、抽出設定、アクセシブルなスウォッチカード、エスケープ済みのユーザー由来値、ブラウザー確認やデザイン講評向けのコントラスト指針を含む、単体 HTML コンタクトシートレポートを生成します。
@@ -25,7 +26,7 @@
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
 - `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
-- `--precision N` により、JSON、CSV、Markdown、プレーンテキスト、HTML、ターミナル要約のレポート用割合と相対輝度を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
+- `--precision N` により、JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合と相対輝度を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
 - ソースチェックアウト内で、小さな決定的 PNG と任意の Markdown 索引を含むサンプル素材ギャラリーを生成し、パレット抽出とレポートコマンドの教材に使えます。
@@ -43,10 +44,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.gpl`、`story.ase` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl`、`story.ase` を書き出します。
 
 同じソースチェックアウトからローカル教材用素材を生成します。
 
@@ -115,7 +116,7 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 コンパクトな確認出力向けに、レポートの割合と相対輝度を丸めます。
 
 ```bash
-swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --html poster-colors.html
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
 2 枚のローカル画像を比較し、JSON、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
@@ -129,6 +130,8 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --json pale
 比較 HTML レポートは、ブラウザーで確認できる単体のローカルファイルです。比較 Markdown レポートは、メモ、Issue コメント、デザインドキュメントに向いたポータブルな表です。比較プレーンテキストレポートは、メール、チケット、レビューログ向けの決定的な UTF-8 ドリフトシートです。これらのレポートは、安全に表現された前後ソース名とパス、各側の主要色、共有色、追加色、削除色、空の変更リストに対する明確な `None` 状態、ドリフトスコアを含みます。同じ `compare` コマンドで `--json`、`--html`、`--markdown`、`--text` を同時に指定できます。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、読みやすい文字色、コントラスト指針が含まれます。
+
+SVG レポートは、ドキュメントやスライド向けの単体ローカルスウォッチシートです。タイトル、元ファイル名、画像サイズ、抽出設定を表示し、各スウォッチ行には色の矩形、HEX、任意の近似名、割合、輝度、ラベル、読みやすい文字色が含まれます。ユーザー由来のタイトル、元ファイル名、ラベル、名前は XML エスケープされ、元画像自体は埋め込まれません。
 
 スタイルシートで使える CSS カスタムプロパティを作成します。
 
@@ -148,6 +151,12 @@ swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster P
 swatch-story poster.png --colors 5 --text poster-colors.txt --title "Poster Palette"
 ```
 
+ドキュメントやスライド向けの単体 SVG スウォッチシートを作成します。
+
+```bash
+swatch-story poster.png --colors 5 --svg poster-colors.svg --title "Poster Palette"
+```
+
 デザインツール向けの GIMP パレットを作成します。
 
 ```bash
@@ -160,7 +169,7 @@ swatch-story poster.png --colors 5 --gpl poster-colors.gpl --title "Poster Palet
 swatch-story poster.png --colors 5 --ase poster-colors.ase --title "Poster Palette"
 ```
 
-JSON、CSV、HTML、Markdown、プレーンテキスト、GIMP と ASE パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
+JSON、CSV、HTML、Markdown、プレーンテキスト、SVG、GIMP と ASE パレットのラベル、CSS コメント、ターミナル要約に近似的な一般色名ヒントを含めます。
 
 ```bash
 swatch-story poster.png --colors 5 --names --json poster-colors.json --csv poster-colors.csv --markdown poster-colors.md
@@ -291,6 +300,7 @@ Drift score: 66.67%
 - `--html PATH`: 単体 HTML レポートを書き出します。
 - `--markdown PATH`: ポータブルな Markdown レポートを書き出します。
 - `--text PATH`: UTF-8 プレーンテキストのパレットシートを書き出します。タイトル、元ファイル名、画像サイズ、抽出設定、各スウォッチの順位、HEX、RGB の組、割合、ラベル、最適な文字色、任意の名前ヒントを含みます。
+- `--svg PATH`: 決定的な UTF-8 単体 SVG スウォッチシートを書き出します。タイトル、元ファイル名、画像サイズ、抽出設定、各スウォッチ行の色矩形、HEX、任意の名前ヒント、割合、輝度、ラベル、読みやすい文字色を含みます。
 - `--gpl PATH`: 決定的な GIMP `.gpl` パレットを書き出します。
 - `--ase PATH`: 決定的な Adobe Swatch Exchange `.ase` パレットを書き出します。
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
@@ -298,8 +308,8 @@ Drift score: 66.67%
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
 - `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
-- `--precision N`: ユーザー向けレポートの割合と相対輝度を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、CSV、Markdown、プレーンテキスト、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
-- `--title TEXT`: HTML、Markdown、プレーンテキスト、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
+- `--precision N`: ユーザー向けレポートの割合と相対輝度を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
+- `--title TEXT`: HTML、Markdown、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
