@@ -82,6 +82,44 @@ def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
     assert "66.7%" in capsys.readouterr().out
 
 
+def test_cli_writes_svg_report_with_names_title_and_precision(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli <story>.png"
+    image = Image.new("RGB", (3, 1))
+    image.putdata([(255, 0, 0), (255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    svg_path = tmp_path / "nested" / "story.svg"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--names",
+            "--precision",
+            "1",
+            "--title",
+            "<CLI & Story>",
+            "--svg",
+            str(svg_path),
+        ]
+    )
+
+    assert exit_code == 0
+    svg = svg_path.read_text(encoding="utf-8")
+    assert svg.startswith('<?xml version="1.0" encoding="UTF-8"?>\n')
+    assert "&lt;CLI &amp; Story&gt;" in svg
+    assert "cli &lt;story&gt;.png" in svg
+    assert "names included" in svg
+    assert "red" in svg
+    assert "66.7%" in svg
+    assert "0.2" in svg
+    assert "#ff0000" in capsys.readouterr().out
+
+
 def test_cli_rejects_invalid_precision_with_argparse(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)

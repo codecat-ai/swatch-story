@@ -38,6 +38,11 @@ CSV_HEADER = [
     "name",
 ]
 
+SVG_FONT = (
+    "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "
+    "'Segoe UI', sans-serif"
+)
+
 
 def render_csv_report(summary: dict[str, Any], *, precision: int | None = None) -> str:
     output = io.StringIO(newline="")
@@ -315,6 +320,164 @@ def write_text_report(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         render_text_report(summary, title=title, precision=precision),
+        encoding="utf-8",
+    )
+
+
+def render_svg_report(
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> str:
+    palette = summary["palette"]
+    width = 960
+    row_height = 128
+    top_height = 190
+    bottom_padding = 32
+    height = top_height + (len(palette) * row_height) + bottom_padding
+    safe_title = escape(str(title), quote=True)
+    source = escape(str(summary["source"]), quote=True)
+    image_width = escape(str(summary["size"]["width"]), quote=True)
+    image_height = escape(str(summary["size"]["height"]), quote=True)
+    settings = escape(_settings_summary(summary), quote=True)
+    swatches = "\n".join(
+        _render_svg_swatch(
+            entry,
+            y=top_height + (index * row_height),
+            precision=precision,
+        )
+        for index, entry in enumerate(palette)
+    )
+    title_text = _svg_text(
+        40,
+        56,
+        safe_title,
+        fill="#222222",
+        size=34,
+        weight=700,
+    )
+    source_text = _svg_text(40, 94, f"Source: {source}", fill="#555555")
+    size_text = _svg_text(
+        40,
+        124,
+        f"Image: {image_width} x {image_height} px",
+        fill="#555555",
+    )
+    settings_text = _svg_text(40, 154, settings, fill="#555555")
+    svg_attrs = (
+        f'xmlns="http://www.w3.org/2000/svg" width="{width}" '
+        f'height="{height}" viewBox="0 0 {width} {height}" '
+        'role="img" aria-labelledby="title desc"'
+    )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg {svg_attrs}>
+  <title id="title">{safe_title}</title>
+  <desc id="desc">Palette swatch sheet for {source}</desc>
+  <rect width="100%" height="100%" fill="#f7f7f5"/>
+  {title_text}
+  {source_text}
+  {size_text}
+  {settings_text}
+{swatches}
+</svg>
+"""
+
+
+def _settings_summary(summary: dict[str, Any]) -> str:
+    settings = summary.get("settings", {})
+    palette = summary["palette"]
+    colors = _single_line(settings.get("colors", len(palette)))
+    sample_step = _single_line(settings.get("sample_step", "unknown"))
+    sample_limit = _single_line(settings.get("sample_limit", "unknown"))
+    cluster_distance = _single_line(settings.get("cluster_distance", 0))
+    sort = _single_line(settings.get("sort", "frequency"))
+    ignored_color = _single_line(settings.get("ignore_color", "none"))
+    names_enabled = bool(
+        settings.get("color_names", any("name" in entry for entry in palette))
+    )
+    names_label = "included" if names_enabled else "not included"
+    return (
+        f"Settings: colors {colors}; sample step {sample_step}; "
+        f"sample limit {sample_limit}; cluster distance {cluster_distance}; "
+        f"sort {sort}; ignored color {ignored_color}; names {names_label}"
+    )
+
+
+def _render_svg_swatch(
+    entry: dict[str, Any], *, y: int, precision: int | None = None
+) -> str:
+    hex_color = escape(str(entry["hex"]), quote=True)
+    label = escape(_single_line(entry["label"]), quote=True)
+    text_color = escape(_single_line(entry["best_text_color"]), quote=True)
+    name = ""
+    if "name" in entry:
+        name = f" | Name {escape(_single_line(entry['name']), quote=True)}"
+    details = escape(
+        (
+            f"{_format_decimal(entry['percent'], precision)}% | "
+            f"Luminance {_format_decimal(entry['luminance'], precision)} | "
+            f"Label {_single_line(entry['label'])} | "
+            f"Text {_single_line(entry['best_text_color'])}"
+        ),
+        quote=True,
+    )
+    swatch_title = escape(f"{entry['rank']}. {entry['hex']}", quote=True)
+    title_text = _svg_text(
+        174,
+        38,
+        swatch_title,
+        fill="#222222",
+        size=23,
+        weight=700,
+    )
+    details_text = _svg_text(174, 64, details, fill="#555555", size=16)
+    label_text = _svg_text(174, 88, f"{label}{name}", fill="#555555", size=16)
+    hex_text = _svg_text(
+        42,
+        59,
+        hex_color,
+        fill=text_color,
+        size=18,
+        weight=700,
+    )
+    return f"""  <g transform="translate(40 {y})">
+    <rect x="0" y="0" width="880" height="104" rx="8" fill="#ffffff" stroke="#dddddd"/>
+    <rect x="18" y="18" width="132" height="68" rx="6" fill="{hex_color}"/>
+    {title_text}
+    {details_text}
+    {label_text}
+    {hex_text}
+  </g>"""
+
+
+def _svg_text(
+    x: int,
+    y: int,
+    text: str,
+    *,
+    fill: str,
+    size: int = 17,
+    weight: int | None = None,
+) -> str:
+    weight_attr = f' font-weight="{weight}"' if weight is not None else ""
+    return (
+        f'<text x="{x}" y="{y}" fill="{fill}" font-family="{SVG_FONT}" '
+        f'font-size="{size}"{weight_attr}>{text}</text>'
+    )
+
+
+def write_svg_report(
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_svg_report(summary, title=title, precision=precision),
         encoding="utf-8",
     )
 

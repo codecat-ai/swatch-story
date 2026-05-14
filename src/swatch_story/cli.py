@@ -30,6 +30,7 @@ from swatch_story.report import (
     write_html_report,
     write_json_report,
     write_markdown_report,
+    write_svg_report,
     write_text_report,
 )
 
@@ -82,6 +83,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--text", dest="text_path", help="Write plain-text report to PATH"
+    )
+    parser.add_argument(
+        "--svg", dest="svg_path", help="Write standalone SVG swatch sheet to PATH"
     )
     parser.add_argument(
         "--gpl", dest="gpl_path", help="Write GIMP .gpl palette to PATH"
@@ -244,6 +248,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_text_report(
             summary,
             args.text_path,
+            title=args.title,
+            precision=args.precision,
+        )
+    if args.svg_path:
+        write_svg_report(
+            summary,
+            args.svg_path,
             title=args.title,
             precision=args.precision,
         )

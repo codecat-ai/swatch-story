@@ -10,6 +10,7 @@ from swatch_story.report import (
     render_gpl_report,
     render_html_report,
     render_markdown_report,
+    render_svg_report,
     render_text_report,
     write_ase_report,
     write_css_report,
@@ -18,6 +19,7 @@ from swatch_story.report import (
     write_html_report,
     write_json_report,
     write_markdown_report,
+    write_svg_report,
     write_text_report,
 )
 
@@ -200,6 +202,59 @@ def test_write_csv_report_creates_parent_directories(tmp_path: Path) -> None:
         "1,#112233,17,34,51,1,50.0,0.015,white,dark,blue\n"
         "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,gray\n"
     )
+
+
+def test_svg_report_renders_standalone_swatch_sheet_with_metadata() -> None:
+    svg = render_svg_report(named_summary(), title="Palette Story", precision=1)
+
+    assert svg.startswith('<?xml version="1.0" encoding="UTF-8"?>\n')
+    assert svg.endswith("\n")
+    assert '<svg xmlns="http://www.w3.org/2000/svg"' in svg
+    assert '<title id="title">Palette Story</title>' in svg
+    assert '<desc id="desc">Palette swatch sheet for sample.png</desc>' in svg
+    assert "Source: sample.png" in svg
+    assert "Image: 2 x 1 px" in svg
+    assert (
+        "Settings: colors 2; sample step 1; sample limit unknown; "
+        "cluster distance 0; sort frequency; ignored color none; names included"
+    ) in svg
+    assert 'fill="#112233"' in svg
+    assert 'fill="#eeeeee"' in svg
+    assert "#112233" in svg
+    assert "blue" in svg
+    assert "50.0%" in svg
+    assert "Luminance 0.0" in svg
+    assert "Label dark" in svg
+    assert "Text white" in svg
+
+
+def test_svg_report_escapes_user_derived_text_without_embedding_source() -> None:
+    summary = sample_summary()
+    summary["source"] = 'sample"><script>.png'
+    summary["source_path"] = "fixtures/<sample&story>.png"
+    summary["palette"][0]["name"] = "<blue & steel>"
+    summary["palette"][0]["label"] = "<dark>"
+
+    svg = render_svg_report(summary, title="<Palette & Story>")
+
+    assert "&lt;Palette &amp; Story&gt;" in svg
+    assert "sample&quot;&gt;&lt;script&gt;.png" in svg
+    assert "fixtures/&lt;sample&amp;story&gt;.png" not in svg
+    assert "&lt;blue &amp; steel&gt;" in svg
+    assert "Label &lt;dark&gt;" in svg
+    assert "<script>" not in svg
+    assert "<image" not in svg
+    assert "href=" not in svg
+
+
+def test_write_svg_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.svg"
+
+    write_svg_report(sample_summary(), output, title="Palette Story")
+
+    svg = output.read_text(encoding="utf-8")
+    assert svg.startswith('<?xml version="1.0" encoding="UTF-8"?>\n')
+    assert '<title id="title">Palette Story</title>' in svg
 
 
 def test_html_report_escapes_title_and_contains_swatches() -> None:
