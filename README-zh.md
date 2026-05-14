@@ -28,6 +28,7 @@
 - `--precision N` 可把 JSON、CSV、Markdown、纯文本、HTML 和终端摘要中的报告占比与相对亮度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
+- 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG，并可选写入 Markdown 索引，用于教学调色板提取和报告命令。
 
 ## 安装
 
@@ -47,7 +48,21 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 
 该命令会打印终端摘要，并在需要时写入 `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.gpl` 和 `story.ase`。
 
+从同一个源码检出生成本地教学素材：
+
+```bash
+swatch-story gallery demo-gallery
+```
+
+gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令。
+
 ## 示例
+
+只生成示例 PNG 素材，不生成 Markdown 索引：
+
+```bash
+swatch-story gallery demo-gallery --no-index
+```
 
 只创建 JSON 报告：
 
@@ -289,6 +304,8 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
+`swatch-story gallery OUT_DIR [--no-index] [--force]` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令的 Markdown `README.md` gallery。除非提供 `--force`，否则它会拒绝覆盖已有 gallery 文件。
+
 MVP 不读取配置文件，也不会获取远程图片。
 
 ## 开发
@@ -311,7 +328,7 @@ pytest -q
 
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
-- 小型示例素材库，用于教学调色板提取和各种报告格式。
+- 为生成的 gallery 素材提供可选 JSON 清单，让课程无需重新解析 Markdown 就能断言预期主色。
 - HTML 报告中可选的并排调色板预览缩略图，便于更快进行视觉审阅。
 
 ## 贡献

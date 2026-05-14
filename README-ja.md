@@ -28,6 +28,7 @@
 - `--precision N` により、JSON、CSV、Markdown、プレーンテキスト、HTML、ターミナル要約のレポート用割合と相対輝度を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
+- ソースチェックアウト内で、小さな決定的 PNG と任意の Markdown 索引を含むサンプル素材ギャラリーを生成し、パレット抽出とレポートコマンドの教材に使えます。
 
 ## インストール
 
@@ -47,7 +48,21 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 
 このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.gpl`、`story.ase` を書き出します。
 
+同じソースチェックアウトからローカル教材用素材を生成します。
+
+```bash
+swatch-story gallery demo-gallery
+```
+
+gallery コマンドは小さな決定的 PNG ファイルと `demo-gallery/README.md` を書き出します。README には、それらのサンプルからパレットやレポートを作るコマンドが含まれます。
+
 ## 例
+
+Markdown 索引なしでサンプル PNG 素材だけを生成します。
+
+```bash
+swatch-story gallery demo-gallery --no-index
+```
 
 JSON レポートだけを作成します。
 
@@ -289,6 +304,8 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
+`swatch-story gallery OUT_DIR [--no-index] [--force]` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドを含む Markdown `README.md` gallery も生成します。`--force` がない限り、既存の gallery ファイルは上書きしません。
+
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
 
 ## 開発
@@ -311,7 +328,7 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- パレット抽出と各レポート形式を教えるための小さなサンプル素材ギャラリー。
+- 生成された gallery 素材向けの任意 JSON マニフェストにより、教材が Markdown を再解析せずに期待される主要色を検証できるようにする。
 - HTML レポートで任意の横並びパレットプレビューサムネイルを表示し、視覚確認を速くする。
 
 ## コントリビュート
