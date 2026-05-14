@@ -60,6 +60,34 @@ def render_compare_text(report: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_compare_text_report(
+    report: dict[str, Any], *, title: str = "Palette Drift Report"
+) -> str:
+    before = report["before"]
+    after = report["after"]
+    rows = [
+        ("Before source name", str(before["source"])),
+        ("Before source path", str(before["source_path"])),
+        ("After source name", str(after["source"])),
+        ("After source path", str(after["source_path"])),
+        (
+            "Before dominant colors",
+            _format_text_color_list([entry["hex"] for entry in before["palette"]]),
+        ),
+        (
+            "After dominant colors",
+            _format_text_color_list([entry["hex"] for entry in after["palette"]]),
+        ),
+        ("Shared colors", _format_text_color_list(report["shared"])),
+        ("Added colors", _format_text_color_list(report["added"])),
+        ("Removed colors", _format_text_color_list(report["removed"])),
+        ("Drift score", f"{report['drift_score']}%"),
+    ]
+    lines = [_single_line(title), ""]
+    lines.extend(f"{label}: {_single_line(value)}" for label, value in rows)
+    return "\n".join(lines) + "\n"
+
+
 def render_compare_html_report(
     report: dict[str, Any], *, title: str = "Palette Drift Report"
 ) -> str:
@@ -252,6 +280,12 @@ def write_compare_markdown_report(
     path.write_text(render_compare_markdown_report(report), encoding="utf-8")
 
 
+def write_compare_text_report(report: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_compare_text_report(report), encoding="utf-8")
+
+
 def write_compare_json(report: dict[str, Any], output_path: str | Path) -> None:
     write_json_report(report, output_path)
 
@@ -262,6 +296,10 @@ def _format_optional_color(value: str | None) -> str:
 
 def _format_color_list(values: list[str]) -> str:
     return ", ".join(values) if values else "none"
+
+
+def _format_text_color_list(values: list[str]) -> str:
+    return ", ".join(values) if values else "None"
 
 
 def _format_html_optional_color(value: str | None) -> str:
@@ -276,6 +314,19 @@ def _format_markdown_color_list(values: list[str]) -> str:
 
 def _format_markdown_value(value: str) -> str:
     return markdown_escape(value)
+
+
+def _single_line(value: object) -> str:
+    without_controls = "".join(
+        " " if _is_control_character(character) else character
+        for character in str(value)
+    )
+    return " ".join(without_controls.split())
+
+
+def _is_control_character(value: str) -> bool:
+    codepoint = ord(value)
+    return codepoint < 32 or 127 <= codepoint < 160
 
 
 def _render_compare_side(label: str, side: dict[str, Any]) -> str:
