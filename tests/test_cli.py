@@ -38,6 +38,61 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (3, 1))
+    image.putdata([(255, 0, 0), (255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+    csv_path = tmp_path / "story.csv"
+    markdown_path = tmp_path / "story.md"
+    text_path = tmp_path / "story.txt"
+    html_path = tmp_path / "story.html"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--precision",
+            "1",
+            "--json",
+            str(json_path),
+            "--csv",
+            str(csv_path),
+            "--markdown",
+            str(markdown_path),
+            "--text",
+            str(text_path),
+            "--html",
+            str(html_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert [entry["percent"] for entry in summary["palette"]] == [66.7, 33.3]
+    assert [entry["luminance"] for entry in summary["palette"]] == [0.2, 0.1]
+    assert ",66.7,0.2," in csv_path.read_text(encoding="utf-8")
+    assert "| 66.7% | 0.2 |" in markdown_path.read_text(encoding="utf-8")
+    assert "| 66.7% |" in text_path.read_text(encoding="utf-8")
+    assert "<dd>66.7% of sampled pixels</dd>" in html_path.read_text(encoding="utf-8")
+    assert "66.7%" in capsys.readouterr().out
+
+
+def test_cli_rejects_invalid_precision_with_argparse(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--precision", "7"])
+
+    assert exc_info.value.code == 2
+    assert "--precision must be between 0 and 6" in capsys.readouterr().err
+
+
 def test_cli_compare_prints_report_and_writes_json(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "before.png"
     before = Image.new("RGB", (3, 1))

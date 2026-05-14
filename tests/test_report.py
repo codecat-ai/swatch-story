@@ -159,6 +159,17 @@ def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
     assert data["palette"][0]["hex"] == "#112233"
 
 
+def test_write_json_report_applies_requested_precision(tmp_path: Path) -> None:
+    output = tmp_path / "story.json"
+
+    write_json_report(sample_summary(), output, precision=2)
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["palette"][0]["percent"] == 50.0
+    assert data["palette"][0]["luminance"] == 0.01
+    assert data["palette"][1]["luminance"] == 0.85
+
+
 def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:
     summary = sample_summary()
     summary["palette"][0]["label"] = "dark, cool"
@@ -168,6 +179,14 @@ def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:
         "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\r\n"
         '1,#112233,17,34,51,1,50.0,0.015,white,"dark, cool",\r\n'
         "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,pale gray\r\n"
+    )
+
+
+def test_csv_report_applies_requested_precision() -> None:
+    assert render_csv_report(sample_summary(), precision=1) == (
+        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\r\n"
+        "1,#112233,17,34,51,1,50.0,0.0,white,dark,\r\n"
+        "2,#eeeeee,238,238,238,1,50.0,0.9,black,light,\r\n"
     )
 
 
@@ -253,6 +272,14 @@ def test_html_report_cards_include_contrast_guidance() -> None:
     assert "Relative luminance</dt>" in html
 
 
+def test_html_report_applies_requested_precision() -> None:
+    html = render_html_report(sample_summary(), precision=2)
+
+    assert "<dd>50.00% of sampled pixels</dd>" in html
+    assert "<dd>0.01</dd>" in html
+    assert "<dd>0.85</dd>" in html
+
+
 def test_html_report_includes_color_names_only_when_present() -> None:
     unnamed_html = render_html_report(sample_summary())
     named_html = render_html_report(named_summary())
@@ -331,6 +358,13 @@ def test_markdown_report_renders_portable_palette_table() -> None:
     )
 
 
+def test_markdown_report_applies_requested_precision() -> None:
+    markdown = render_markdown_report(sample_summary(), precision=0)
+
+    assert "| 1 | `#112233` | `17, 34, 51` | 50% | 0 | white | dark |" in markdown
+    assert "| 2 | `#eeeeee` | `238, 238, 238` | 50% | 1 | black | light |" in markdown
+
+
 def test_markdown_report_includes_color_names_only_when_present() -> None:
     unnamed_markdown = render_markdown_report(sample_summary())
     named_markdown = render_markdown_report(named_summary())
@@ -370,6 +404,13 @@ def test_text_report_renders_paste_friendly_palette_sheet() -> None:
         "1. #112233 | rgb(17, 34, 51) | 50.0% | dark | text white | name blue\n"
         "2. #eeeeee | rgb(238, 238, 238) | 50.0% | light | text black | name gray\n"
     )
+
+
+def test_text_report_applies_requested_precision() -> None:
+    text = render_text_report(sample_summary(), precision=2)
+
+    assert "1. #112233 | rgb(17, 34, 51) | 50.00% | dark | text white\n" in text
+    assert "2. #eeeeee | rgb(238, 238, 238) | 50.00% | light | text black\n" in text
 
 
 def test_text_report_sanitizes_multiline_title_source_label_and_names() -> None:

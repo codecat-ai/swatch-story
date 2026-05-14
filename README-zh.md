@@ -25,6 +25,7 @@
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
 - `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
+- `--precision N` 可把 JSON、CSV、Markdown、纯文本、HTML 和终端摘要中的报告占比与相对亮度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON 或独立 HTML。
 
@@ -94,6 +95,12 @@ swatch-story poster.png --colors 6 --sort luminance --html poster-luminance.html
 
 ```bash
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
+```
+
+为紧凑审阅输出舍入报告占比和相对亮度：
+
+```bash
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --html poster-colors.html
 ```
 
 对比两张本地图像，并写入 JSON 和 HTML 漂移报告：
@@ -259,6 +266,7 @@ JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
 - `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
+- `--precision N`：把面向用户的报告占比和相对亮度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、CSV、Markdown、纯文本、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
 - `--title TEXT`：HTML、Markdown、纯文本、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
@@ -287,7 +295,7 @@ pytest -q
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
 - 小型示例素材库，用于教学调色板提取和各种报告格式。
-- 可配置的输出精度，适合需要更少小数位的报告。
+- HTML 报告中可选的并排调色板预览缩略图，便于更快进行视觉审阅。
 
 ## 贡献
 

@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import struct
+from copy import deepcopy
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -11,11 +12,14 @@ from typing import Any
 from swatch_story.palette import contrast_ratio
 
 
-def write_json_report(summary: dict[str, Any], output_path: str | Path) -> None:
+def write_json_report(
+    summary: dict[str, Any], output_path: str | Path, *, precision: int | None = None
+) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    report_summary = _summary_with_precision(summary, precision)
     path.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(report_summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -35,7 +39,7 @@ CSV_HEADER = [
 ]
 
 
-def render_csv_report(summary: dict[str, Any]) -> str:
+def render_csv_report(summary: dict[str, Any], *, precision: int | None = None) -> str:
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(CSV_HEADER)
@@ -49,8 +53,8 @@ def render_csv_report(summary: dict[str, Any]) -> str:
                 green,
                 blue,
                 entry["count"],
-                entry["percent"],
-                entry["luminance"],
+                _format_decimal(entry["percent"], precision),
+                _format_decimal(entry["luminance"], precision),
                 entry["best_text_color"],
                 entry["label"],
                 entry.get("name", ""),
@@ -59,10 +63,16 @@ def render_csv_report(summary: dict[str, Any]) -> str:
     return output.getvalue()
 
 
-def write_csv_report(summary: dict[str, Any], output_path: str | Path) -> None:
+def write_csv_report(
+    summary: dict[str, Any], output_path: str | Path, *, precision: int | None = None
+) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_csv_report(summary), encoding="utf-8", newline="")
+    path.write_text(
+        render_csv_report(summary, precision=precision),
+        encoding="utf-8",
+        newline="",
+    )
 
 
 def render_ase_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> bytes:
@@ -171,7 +181,10 @@ def write_gpl_report(
 
 
 def render_markdown_report(
-    summary: dict[str, Any], *, title: str = "Swatch Story"
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
 ) -> str:
     source = markdown_escape(str(summary["source"]))
     width = summary["size"]["width"]
@@ -207,8 +220,8 @@ def render_markdown_report(
         row.extend(
             [
                 f"`{markdown_escape(rgb)}`",
-                f"{entry['percent']}%",
-                str(entry["luminance"]),
+                f"{_format_decimal(entry['percent'], precision)}%",
+                _format_decimal(entry["luminance"], precision),
                 markdown_escape(entry["best_text_color"]),
                 markdown_escape(entry["label"]),
             ]
@@ -222,14 +235,26 @@ def markdown_escape(value: str) -> str:
 
 
 def write_markdown_report(
-    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
 ) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_markdown_report(summary, title=title), encoding="utf-8")
+    path.write_text(
+        render_markdown_report(summary, title=title, precision=precision),
+        encoding="utf-8",
+    )
 
 
-def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
+def render_text_report(
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> str:
     settings = summary.get("settings", {})
     width = summary["size"]["width"]
     height = summary["size"]["height"]
@@ -262,7 +287,8 @@ def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
         red, green, blue = entry["rgb"]
         line = (
             f"{entry['rank']}. {_single_line(entry['hex'])} | "
-            f"rgb({red}, {green}, {blue}) | {entry['percent']}% | "
+            f"rgb({red}, {green}, {blue}) | "
+            f"{_format_decimal(entry['percent'], precision)}% | "
             f"{_single_line(entry['label'])} | "
             f"text {_single_line(entry['best_text_color'])}"
         )
@@ -273,14 +299,26 @@ def render_text_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
 
 
 def write_text_report(
-    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
 ) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_text_report(summary, title=title), encoding="utf-8")
+    path.write_text(
+        render_text_report(summary, title=title, precision=precision),
+        encoding="utf-8",
+    )
 
 
-def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") -> str:
+def render_html_report(
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> str:
     safe_title = escape(title)
     source_name = escape(str(summary["source"]))
     source_path = escape(str(summary.get("source_path", summary["source"])))
@@ -301,7 +339,9 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
             any("name" in entry for entry in summary["palette"]),
         )
     )
-    swatches = "\n".join(render_swatch(entry) for entry in summary["palette"])
+    swatches = "\n".join(
+        render_swatch(entry, precision=precision) for entry in summary["palette"]
+    )
     palette_count = len(summary["palette"])
     dominant = escape(str(summary["palette"][0]["hex"])) if palette_count else "none"
     swatch_label = "swatch" if palette_count == 1 else "swatches"
@@ -454,7 +494,7 @@ def render_html_report(summary: dict[str, Any], *, title: str = "Swatch Story") 
 """
 
 
-def render_swatch(entry: dict[str, Any]) -> str:
+def render_swatch(entry: dict[str, Any], *, precision: int | None = None) -> str:
     hex_color = escape(entry["hex"])
     text_color = escape(entry["best_text_color"])
     label = escape(entry["label"])
@@ -481,9 +521,9 @@ def render_swatch(entry: dict[str, Any]) -> str:
               <dt>RGB</dt>
               <dd>{escape(rgb)}</dd>
               <dt>Share</dt>
-              <dd>{entry["percent"]}% of sampled pixels</dd>
+              <dd>{_format_decimal(entry["percent"], precision)}% of sampled pixels</dd>
               <dt>Relative luminance</dt>
-              <dd>{entry["luminance"]}</dd>
+              <dd>{_format_decimal(entry["luminance"], precision)}</dd>
             </dl>
           </div>
           <div class="guidance">
@@ -499,8 +539,33 @@ def render_swatch(entry: dict[str, Any]) -> str:
 
 
 def write_html_report(
-    summary: dict[str, Any], output_path: str | Path, *, title: str = "Swatch Story"
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
 ) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_html_report(summary, title=title), encoding="utf-8")
+    path.write_text(
+        render_html_report(summary, title=title, precision=precision),
+        encoding="utf-8",
+    )
+
+
+def _format_decimal(value: object, precision: int | None) -> str:
+    if precision is None:
+        return str(value)
+    return f"{float(value):.{precision}f}"
+
+
+def _summary_with_precision(
+    summary: dict[str, Any], precision: int | None
+) -> dict[str, Any]:
+    if precision is None:
+        return summary
+    report_summary = deepcopy(summary)
+    for entry in report_summary["palette"]:
+        entry["percent"] = round(float(entry["percent"]), precision)
+        entry["luminance"] = round(float(entry["luminance"]), precision)
+    return report_summary

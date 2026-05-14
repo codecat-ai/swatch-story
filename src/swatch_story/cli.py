@@ -46,6 +46,16 @@ def cluster_distance_value(value: str) -> int:
     return distance
 
 
+def precision_value(value: str) -> int:
+    try:
+        precision = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("--precision must be an integer") from exc
+    if precision < 0 or precision > 6:
+        raise argparse.ArgumentTypeError("--precision must be between 0 and 6")
+    return precision
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
@@ -80,6 +90,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--title",
         default="Swatch Story",
         help="Title for HTML, Markdown, text, GIMP palette, and ASE output",
+    )
+    parser.add_argument(
+        "--precision",
+        type=precision_value,
+        default=None,
+        metavar="N",
+        help=(
+            "Decimal places for report percentages and luminance values, 0-6. "
+            "Default preserves existing output."
+        ),
     )
     return parser
 
@@ -169,23 +189,38 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     if args.json_path:
-        write_json_report(summary, args.json_path)
+        write_json_report(summary, args.json_path, precision=args.precision)
     if args.csv_path:
-        write_csv_report(summary, args.csv_path)
+        write_csv_report(summary, args.csv_path, precision=args.precision)
     if args.html_path:
-        write_html_report(summary, args.html_path, title=args.title)
+        write_html_report(
+            summary,
+            args.html_path,
+            title=args.title,
+            precision=args.precision,
+        )
     if args.css_path:
         write_css_report(summary, args.css_path)
     if args.markdown_path:
-        write_markdown_report(summary, args.markdown_path, title=args.title)
+        write_markdown_report(
+            summary,
+            args.markdown_path,
+            title=args.title,
+            precision=args.precision,
+        )
     if args.text_path:
-        write_text_report(summary, args.text_path, title=args.title)
+        write_text_report(
+            summary,
+            args.text_path,
+            title=args.title,
+            precision=args.precision,
+        )
     if args.gpl_path:
         write_gpl_report(summary, args.gpl_path, title=args.title)
     if args.ase_path:
         write_ase_report(summary, args.ase_path, title=args.title)
 
-    print_summary(summary)
+    print_summary(summary, precision=args.precision)
     return 0
 
 
@@ -227,15 +262,20 @@ def compare_main(argv: Sequence[str]) -> int:
     return 0
 
 
-def print_summary(summary: dict) -> None:
+def print_summary(summary: dict, *, precision: int | None = None) -> None:
     print(
         f"{summary['source']} ({summary['size']['width']}x{summary['size']['height']})"
     )
     for entry in summary["palette"]:
         name_hint = f" name:{entry['name']}" if "name" in entry else ""
+        percent = (
+            f"{entry['percent']:>6.2f}"
+            if precision is None
+            else f"{entry['percent']:>{precision + 4}.{precision}f}"
+        )
         print(
             f"{entry['rank']:>2}. {entry['hex']} "
-            f"{entry['percent']:>6.2f}% "
+            f"{percent}% "
             f"{entry['label']}{name_hint} text:{entry['best_text_color']}"
         )
 
