@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import csv
+import io
 from html import escape
 from pathlib import Path
 from typing import Any
 
 from swatch_story.report import markdown_escape, write_json_report
+
+COMPARE_CSV_HEADER = [
+    "section",
+    "field",
+    "value",
+    "category",
+    "hex",
+    "before_percent",
+    "after_percent",
+    "delta_percent",
+]
 
 
 def compare_summaries(
@@ -286,12 +299,123 @@ def write_compare_text_report(report: dict[str, Any], output_path: str | Path) -
     path.write_text(render_compare_text_report(report), encoding="utf-8")
 
 
+def render_compare_csv_report(report: dict[str, Any]) -> str:
+    before = report["before"]
+    after = report["after"]
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(COMPARE_CSV_HEADER)
+    writer.writerows(
+        [
+            ["metadata", "before_source", before["source_path"], "", "", "", "", ""],
+            ["metadata", "after_source", after["source_path"], "", "", "", "", ""],
+            ["metadata", "drift_score", report["drift_score"], "", "", "", "", ""],
+            [
+                "metadata",
+                "dominant_before_hex",
+                before["dominant"] or "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+            [
+                "metadata",
+                "dominant_after_hex",
+                after["dominant"] or "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+            [
+                "metadata",
+                "shared_count",
+                len(report["shared"]),
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+            ["metadata", "added_count", len(report["added"]), "", "", "", "", ""],
+            [
+                "metadata",
+                "removed_count",
+                len(report["removed"]),
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
+        ]
+    )
+
+    before_palette = _palette_by_hex(before)
+    after_palette = _palette_by_hex(after)
+    for hex_color in report["shared"]:
+        before_percent = before_palette[hex_color]["percent"]
+        after_percent = after_palette[hex_color]["percent"]
+        writer.writerow(
+            [
+                "color",
+                "",
+                "",
+                "shared",
+                hex_color,
+                before_percent,
+                after_percent,
+                after_percent - before_percent,
+            ]
+        )
+    for hex_color in report["added"]:
+        writer.writerow(
+            [
+                "color",
+                "",
+                "",
+                "added",
+                hex_color,
+                "",
+                after_palette[hex_color]["percent"],
+                "",
+            ]
+        )
+    for hex_color in report["removed"]:
+        writer.writerow(
+            [
+                "color",
+                "",
+                "",
+                "removed",
+                hex_color,
+                before_palette[hex_color]["percent"],
+                "",
+                "",
+            ]
+        )
+    return output.getvalue()
+
+
+def write_compare_csv_report(report: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_compare_csv_report(report), encoding="utf-8", newline="")
+
+
 def write_compare_json(report: dict[str, Any], output_path: str | Path) -> None:
     write_json_report(report, output_path)
 
 
 def _format_optional_color(value: str | None) -> str:
     return value if value is not None else "none"
+
+
+def _palette_by_hex(side: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {entry["hex"]: entry for entry in side["palette"]}
 
 
 def _format_color_list(values: list[str]) -> str:

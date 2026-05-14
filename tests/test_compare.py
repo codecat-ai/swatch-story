@@ -1,5 +1,6 @@
 from swatch_story.compare import (
     compare_summaries,
+    render_compare_csv_report,
     render_compare_html_report,
     render_compare_markdown_report,
     render_compare_text,
@@ -154,6 +155,31 @@ def test_render_compare_markdown_report_escapes_table_breaking_text() -> None:
     assert "after\\|final<br>two.png" in markdown
     assert "| Added colors | None |" in markdown
     assert "| Removed colors | None |" in markdown
+
+
+def test_render_compare_csv_report_contains_metadata_and_drift_rows() -> None:
+    report = compare_summaries(
+        summary('before, "draft".png', ["#111111", "#222222"]),
+        summary("after.png", ["#222222", "#333333"]),
+    )
+
+    csv = render_compare_csv_report(report)
+
+    assert csv == (
+        "section,field,value,category,hex,before_percent,after_percent,"
+        "delta_percent\r\n"
+        'metadata,before_source,"fixtures/before, ""draft"".png",,,,,\r\n'
+        "metadata,after_source,fixtures/after.png,,,,,\r\n"
+        "metadata,drift_score,66.67,,,,,\r\n"
+        "metadata,dominant_before_hex,#111111,,,,,\r\n"
+        "metadata,dominant_after_hex,#222222,,,,,\r\n"
+        "metadata,shared_count,1,,,,,\r\n"
+        "metadata,added_count,1,,,,,\r\n"
+        "metadata,removed_count,1,,,,,\r\n"
+        "color,,,shared,#222222,50.0,50.0,0.0\r\n"
+        "color,,,added,#333333,,50.0,\r\n"
+        "color,,,removed,#111111,50.0,,\r\n"
+    )
 
 
 def test_render_compare_text_report_contains_deterministic_drift_fields() -> None:

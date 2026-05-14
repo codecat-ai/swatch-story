@@ -119,15 +119,15 @@ Round report percentages and relative luminance values for compact review output
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
-Compare two local images and write JSON, HTML, Markdown, and plain-text drift reports:
+Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text drift reports:
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap.
 
-The compare HTML report is a standalone local file for browser review. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--html`, `--markdown`, and `--text` in the same compare command.
+The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
 
@@ -312,7 +312,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--title TEXT`: title for HTML, Markdown, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata and shared/added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
 `swatch-story gallery OUT_DIR [--no-index] [--force]` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands. It refuses to overwrite existing gallery files unless `--force` is provided.
 
