@@ -93,6 +93,59 @@ def test_cli_rejects_invalid_precision_with_argparse(tmp_path: Path, capsys) -> 
     assert "--precision must be between 0 and 6" in capsys.readouterr().err
 
 
+def test_cli_gallery_writes_samples_and_index(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(["gallery", str(gallery_dir)])
+
+    assert exit_code == 0
+    assert (gallery_dir / "warm-blocks.png").exists()
+    assert (gallery_dir / "cool-stripes.png").exists()
+    assert (gallery_dir / "contrast-checker.png").exists()
+    assert "swatch-story gallery" in (gallery_dir / "README.md").read_text(
+        encoding="utf-8"
+    )
+    assert f"Wrote sample fixture gallery to {gallery_dir}" in capsys.readouterr().out
+
+
+def test_cli_gallery_respects_no_index(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(["gallery", str(gallery_dir), "--no-index"])
+
+    assert exit_code == 0
+    assert (gallery_dir / "warm-blocks.png").exists()
+    assert not (gallery_dir / "README.md").exists()
+    assert "3 files" in capsys.readouterr().out
+
+
+def test_cli_gallery_rejects_existing_files_without_force(
+    tmp_path: Path, capsys
+) -> None:
+    gallery_dir = tmp_path / "gallery"
+    gallery_dir.mkdir()
+    (gallery_dir / "warm-blocks.png").write_text("existing", encoding="utf-8")
+
+    exit_code = main(["gallery", str(gallery_dir)])
+
+    assert exit_code == 2
+    assert "already exists" in capsys.readouterr().err
+
+
+def test_cli_gallery_force_overwrites_existing_files(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+    gallery_dir.mkdir()
+    existing = gallery_dir / "warm-blocks.png"
+    existing.write_text("existing", encoding="utf-8")
+
+    exit_code = main(["gallery", str(gallery_dir), "--force"])
+
+    assert exit_code == 0
+    with Image.open(existing) as image:
+        assert image.size == (4, 4)
+    assert "4 files" in capsys.readouterr().out
+
+
 def test_cli_compare_prints_report_and_writes_json(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "before.png"
     before = Image.new("RGB", (3, 1))

@@ -28,6 +28,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--precision N` formats report percentages and relative luminance values with 0 to 6 decimal places for JSON, CSV, Markdown, text, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
+- Source-checkout sample fixture gallery generation with tiny deterministic PNGs and an optional Markdown index for teaching palette extraction and report commands.
 
 ## Installation
 
@@ -47,7 +48,21 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 
 The command prints a terminal summary and, when requested, writes `story.json`, `story.csv`, `story.css`, `story.html`, `story.md`, `story.txt`, `story.gpl`, and `story.ase`.
 
+Generate local teaching fixtures from the same source checkout:
+
+```bash
+swatch-story gallery demo-gallery
+```
+
+The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands for extracting palettes and reports from those samples.
+
 ## Examples
+
+Generate only the sample PNG fixtures without the Markdown index:
+
+```bash
+swatch-story gallery demo-gallery --no-index
+```
 
 Create only a JSON report:
 
@@ -289,6 +304,8 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
+`swatch-story gallery OUT_DIR [--no-index] [--force]` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands. It refuses to overwrite existing gallery files unless `--force` is provided.
+
 The MVP does not read a config file and does not fetch remote images.
 
 ## Development
@@ -311,7 +328,7 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Small sample fixture gallery for teaching palette extraction and report formats.
+- Optional JSON manifest for generated gallery fixtures so lessons can assert expected dominant colors without re-parsing Markdown.
 - Optional side-by-side palette preview thumbnails in HTML reports for quicker visual review.
 
 ## Contributing

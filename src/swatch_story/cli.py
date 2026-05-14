@@ -13,6 +13,7 @@ from swatch_story.compare import (
     write_compare_markdown_report,
     write_compare_text_report,
 )
+from swatch_story.gallery import GalleryError, create_gallery
 from swatch_story.palette import (
     DEFAULT_SAMPLE_LIMIT,
     MAX_CLUSTER_DISTANCE,
@@ -127,6 +128,27 @@ def build_compare_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_gallery_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="swatch-story gallery",
+        description=(
+            "Generate deterministic sample PNG fixtures and a Markdown gallery."
+        ),
+    )
+    parser.add_argument("output_dir", help="Directory where gallery files are written")
+    parser.add_argument(
+        "--no-index",
+        action="store_true",
+        help="Write only PNG fixtures and skip README.md",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing gallery files",
+    )
+    return parser
+
+
 def add_palette_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
     parser.add_argument(
@@ -177,6 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] == ["compare"]:
         return compare_main(argv[1:])
+    if argv[:1] == ["gallery"]:
+        return gallery_main(argv[1:])
 
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -229,6 +253,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_ase_report(summary, args.ase_path, title=args.title)
 
     print_summary(summary, precision=args.precision)
+    return 0
+
+
+def gallery_main(argv: Sequence[str]) -> int:
+    parser = build_gallery_parser()
+    args = parser.parse_args(argv)
+
+    try:
+        written = create_gallery(
+            Path(args.output_dir),
+            include_index=not args.no_index,
+            force=args.force,
+        )
+    except GalleryError as exc:
+        print(f"swatch-story gallery: {exc}", file=sys.stderr)
+        return 2
+
+    print(
+        f"Wrote sample fixture gallery to {Path(args.output_dir)} "
+        f"({len(written)} files)"
+    )
     return 0
 
 
