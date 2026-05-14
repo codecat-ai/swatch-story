@@ -27,7 +27,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
 - `--precision N` formats report percentages and relative luminance values with 0 to 6 decimal places for JSON, CSV, Markdown, text, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
-- Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, or standalone HTML output.
+- Palette comparison reports for two local images with dominant-color changes, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, or portable Markdown output.
 
 ## Installation
 
@@ -103,15 +103,15 @@ Round report percentages and relative luminance values for compact review output
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --html poster-colors.html
 ```
 
-Compare two local images and write JSON and HTML drift reports:
+Compare two local images and write JSON, HTML, and Markdown drift reports:
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --html palette-drift.html --markdown palette-drift.md
 ```
 
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap.
 
-The compare HTML report is a standalone local file for browser review. It includes escaped before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, clear `None` states for empty change lists, and the drift score. You can request `--json` and `--html` in the same compare command.
+The compare HTML report is a standalone local file for browser review. The compare Markdown report is a portable table for notes, issue comments, and design docs. Both include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--html`, and `--markdown` in the same compare command.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
 
@@ -270,7 +270,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--title TEXT`: title for HTML, Markdown, text, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, and `--html PATH` writes a standalone HTML comparison report. Both outputs can be requested together.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--html PATH` writes a standalone HTML comparison report, and `--markdown PATH` writes a portable Markdown comparison report. These outputs can be requested together.
 
 The MVP does not read a config file and does not fetch remote images.
 

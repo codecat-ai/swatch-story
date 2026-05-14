@@ -231,7 +231,13 @@ def render_markdown_report(
 
 
 def markdown_escape(value: str) -> str:
-    return escape(value).replace("|", "\\|")
+    return (
+        escape(value)
+        .replace("|", "\\|")
+        .replace("\r\n", "<br>")
+        .replace("\r", "<br>")
+        .replace("\n", "<br>")
+    )
 
 
 def write_markdown_report(
