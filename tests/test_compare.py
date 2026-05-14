@@ -3,6 +3,7 @@ from swatch_story.compare import (
     render_compare_html_report,
     render_compare_markdown_report,
     render_compare_text,
+    render_compare_text_report,
 )
 
 
@@ -153,3 +154,43 @@ def test_render_compare_markdown_report_escapes_table_breaking_text() -> None:
     assert "after\\|final<br>two.png" in markdown
     assert "| Added colors | None |" in markdown
     assert "| Removed colors | None |" in markdown
+
+
+def test_render_compare_text_report_contains_deterministic_drift_fields() -> None:
+    report = compare_summaries(
+        summary("before.png", ["#111111", "#222222"]),
+        summary("after.png", ["#222222", "#333333"]),
+    )
+
+    text = render_compare_text_report(report, title="Palette Drift Report")
+
+    assert text == (
+        "Palette Drift Report\n"
+        "\n"
+        "Before source name: before.png\n"
+        "Before source path: fixtures/before.png\n"
+        "After source name: after.png\n"
+        "After source path: fixtures/after.png\n"
+        "Before dominant colors: #111111, #222222\n"
+        "After dominant colors: #222222, #333333\n"
+        "Shared colors: #222222\n"
+        "Added colors: #333333\n"
+        "Removed colors: #111111\n"
+        "Drift score: 66.67%\n"
+    )
+
+
+def test_render_compare_text_report_sanitizes_single_line_values() -> None:
+    report = compare_summaries(
+        summary("before|draft\none\x00.png", ["#111111"]),
+        summary("after\tfinal\rtwo.png", ["#111111"]),
+    )
+
+    text = render_compare_text_report(report, title=" Drift\nReview\t\x1b ")
+
+    assert text.startswith("Drift Review\n")
+    assert "Before source name: before|draft one .png\n" in text
+    assert "Before source path: fixtures/before|draft one .png\n" in text
+    assert "After source name: after final two.png\n" in text
+    assert "Added colors: None\n" in text
+    assert "Removed colors: None\n" in text
