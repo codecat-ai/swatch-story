@@ -160,7 +160,7 @@ def build_gallery_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story gallery",
         description=(
-            "Generate deterministic sample PNG fixtures and a Markdown gallery."
+            "Generate deterministic sample PNG fixtures and optional gallery metadata."
         ),
     )
     parser.add_argument("output_dir", help="Directory where gallery files are written")
@@ -168,6 +168,11 @@ def build_gallery_parser() -> argparse.ArgumentParser:
         "--no-index",
         action="store_true",
         help="Write only PNG fixtures and skip README.md",
+    )
+    parser.add_argument(
+        "--manifest",
+        action="store_true",
+        help="Write manifest.json with expected sample metadata",
     )
     parser.add_argument(
         "--force",
@@ -299,6 +304,7 @@ def gallery_main(argv: Sequence[str]) -> int:
         written = create_gallery(
             Path(args.output_dir),
             include_index=not args.no_index,
+            include_manifest=args.manifest,
             force=args.force,
         )
     except GalleryError as exc:
