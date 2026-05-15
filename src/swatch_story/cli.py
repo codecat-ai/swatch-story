@@ -377,10 +377,22 @@ def print_summary(summary: dict, *, precision: int | None = None) -> None:
             if precision is None
             else f"{entry['percent']:>{precision + 4}.{precision}f}"
         )
+        contrast_black = (
+            str(entry["contrast_with_black"])
+            if precision is None
+            else f"{entry['contrast_with_black']:.{precision}f}"
+        )
+        contrast_white = (
+            str(entry["contrast_with_white"])
+            if precision is None
+            else f"{entry['contrast_with_white']:.{precision}f}"
+        )
         print(
             f"{entry['rank']:>2}. {entry['hex']} "
             f"{percent}% "
-            f"{entry['label']}{name_hint} text:{entry['best_text_color']}"
+            f"{entry['label']}{name_hint} "
+            f"contrast:black {contrast_black}:1 white {contrast_white}:1 "
+            f"text:{entry['best_text_color']}"
         )
 
 

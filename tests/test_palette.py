@@ -204,6 +204,25 @@ def test_best_text_color_prefers_readable_foreground() -> None:
     assert best_text_color((245, 240, 230)) == "black"
 
 
+def test_palette_entries_include_black_and_white_contrast_ratios(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "contrast.png"
+    save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
+
+    summary = summarize_image(image_path, colors=2, sample_step=1, sort="luminance")
+
+    dark, light = summary["palette"]
+    assert dark["luminance"] == 0.0
+    assert dark["contrast_with_black"] == 1.0
+    assert dark["contrast_with_white"] == 21.0
+    assert dark["best_text_color"] == "white"
+    assert light["luminance"] == 1.0
+    assert light["contrast_with_black"] == 21.0
+    assert light["contrast_with_white"] == 1.0
+    assert light["best_text_color"] == "black"
+
+
 def test_common_color_name_maps_exact_and_nearby_colors() -> None:
     assert common_color_name((255, 0, 0)) == "red"
     assert common_color_name((250, 250, 250)) == "white"
@@ -243,6 +262,8 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
         "count",
         "percent",
         "luminance",
+        "contrast_with_black",
+        "contrast_with_white",
         "best_text_color",
         "label",
     }
