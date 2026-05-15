@@ -43,6 +43,8 @@ def sample_summary() -> dict:
                 "count": 1,
                 "percent": 50.0,
                 "luminance": 0.015,
+                "contrast_with_black": 1.3,
+                "contrast_with_white": 16.15,
                 "best_text_color": "white",
                 "label": "dark",
             },
@@ -53,6 +55,8 @@ def sample_summary() -> dict:
                 "count": 1,
                 "percent": 50.0,
                 "luminance": 0.855,
+                "contrast_with_black": 18.1,
+                "contrast_with_white": 1.16,
                 "best_text_color": "black",
                 "label": "light",
             },
@@ -169,7 +173,11 @@ def test_write_json_report_applies_requested_precision(tmp_path: Path) -> None:
     data = json.loads(output.read_text(encoding="utf-8"))
     assert data["palette"][0]["percent"] == 50.0
     assert data["palette"][0]["luminance"] == 0.01
+    assert data["palette"][0]["contrast_with_black"] == 1.3
+    assert data["palette"][0]["contrast_with_white"] == 16.15
     assert data["palette"][1]["luminance"] == 0.85
+    assert data["palette"][1]["contrast_with_black"] == 18.1
+    assert data["palette"][1]["contrast_with_white"] == 1.16
 
 
 def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:
@@ -178,17 +186,19 @@ def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:
     summary["palette"][1]["name"] = "pale gray"
 
     assert render_csv_report(summary) == (
-        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\r\n"
-        '1,#112233,17,34,51,1,50.0,0.015,white,"dark, cool",\r\n'
-        "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,pale gray\r\n"
+        "rank,hex,r,g,b,count,percent,luminance,contrast_with_black,"
+        "contrast_with_white,best_text_color,label,name\r\n"
+        '1,#112233,17,34,51,1,50.0,0.015,1.3,16.15,white,"dark, cool",\r\n'
+        "2,#eeeeee,238,238,238,1,50.0,0.855,18.1,1.16,black,light,pale gray\r\n"
     )
 
 
 def test_csv_report_applies_requested_precision() -> None:
     assert render_csv_report(sample_summary(), precision=1) == (
-        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\r\n"
-        "1,#112233,17,34,51,1,50.0,0.0,white,dark,\r\n"
-        "2,#eeeeee,238,238,238,1,50.0,0.9,black,light,\r\n"
+        "rank,hex,r,g,b,count,percent,luminance,contrast_with_black,"
+        "contrast_with_white,best_text_color,label,name\r\n"
+        "1,#112233,17,34,51,1,50.0,0.0,1.3,16.1,white,dark,\r\n"
+        "2,#eeeeee,238,238,238,1,50.0,0.9,18.1,1.2,black,light,\r\n"
     )
 
 
@@ -198,9 +208,10 @@ def test_write_csv_report_creates_parent_directories(tmp_path: Path) -> None:
     write_csv_report(named_summary(), output)
 
     assert output.read_text(encoding="utf-8") == (
-        "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name\n"
-        "1,#112233,17,34,51,1,50.0,0.015,white,dark,blue\n"
-        "2,#eeeeee,238,238,238,1,50.0,0.855,black,light,gray\n"
+        "rank,hex,r,g,b,count,percent,luminance,contrast_with_black,"
+        "contrast_with_white,best_text_color,label,name\n"
+        "1,#112233,17,34,51,1,50.0,0.015,1.3,16.15,white,dark,blue\n"
+        "2,#eeeeee,238,238,238,1,50.0,0.855,18.1,1.16,black,light,gray\n"
     )
 
 
@@ -224,6 +235,7 @@ def test_svg_report_renders_standalone_swatch_sheet_with_metadata() -> None:
     assert "blue" in svg
     assert "50.0%" in svg
     assert "Luminance 0.0" in svg
+    assert "Contrast black 1.3:1; white 16.1:1" in svg
     assert "Label dark" in svg
     assert "Text white" in svg
 
@@ -323,6 +335,8 @@ def test_html_report_cards_include_contrast_guidance() -> None:
     assert "Use white text" in html
     assert "Use black text" in html
     assert "Contrast ratio</dt>" in html
+    assert "Black contrast</dt>" in html
+    assert "White contrast</dt>" in html
     assert "WCAG AA for normal text" in html
     assert "Relative luminance</dt>" in html
 
@@ -332,6 +346,8 @@ def test_html_report_applies_requested_precision() -> None:
 
     assert "<dd>50.00% of sampled pixels</dd>" in html
     assert "<dd>0.01</dd>" in html
+    assert "<dd>1.30:1</dd>" in html
+    assert "<dd>16.15:1</dd>" in html
     assert "<dd>0.85</dd>" in html
 
 
@@ -365,9 +381,13 @@ def test_write_css_report_creates_deterministic_custom_properties(
         ":root {\n"
         "  --swatch-story-color-1: #112233;\n"
         "  --swatch-story-color-1-rgb: 17, 34, 51;\n"
+        "  --swatch-story-color-1-contrast-black: 1.3;\n"
+        "  --swatch-story-color-1-contrast-white: 16.15;\n"
         "  --swatch-story-color-1-text: white;\n"
         "  --swatch-story-color-2: #eeeeee;\n"
         "  --swatch-story-color-2-rgb: 238, 238, 238;\n"
+        "  --swatch-story-color-2-contrast-black: 18.1;\n"
+        "  --swatch-story-color-2-contrast-white: 1.16;\n"
         "  --swatch-story-color-2-text: black;\n"
         "}\n"
     )
@@ -405,10 +425,12 @@ def test_markdown_report_renders_portable_palette_table() -> None:
         "Colors: 2  \n"
         "Cluster distance: 0\n"
         "\n"
-        "| Rank | Color | RGB | Percent | Luminance | Text | Label |\n"
-        "| ---: | --- | --- | ---: | ---: | --- | --- |\n"
-        "| 1 | `#112233` | `17, 34, 51` | 50.0% | 0.015 | white | dark |\n"
-        "| 2 | `#eeeeee` | `238, 238, 238` | 50.0% | 0.855 | black | light |\n"
+        "| Rank | Color | RGB | Percent | Luminance | Contrast | Text | Label |\n"
+        "| ---: | --- | --- | ---: | ---: | --- | --- | --- |\n"
+        "| 1 | `#112233` | `17, 34, 51` | 50.0% | 0.015 | "
+        "black 1.3:1; white 16.15:1 | white | dark |\n"
+        "| 2 | `#eeeeee` | `238, 238, 238` | 50.0% | 0.855 | "
+        "black 18.1:1; white 1.16:1 | black | light |\n"
         "\n"
     )
 
@@ -416,19 +438,26 @@ def test_markdown_report_renders_portable_palette_table() -> None:
 def test_markdown_report_applies_requested_precision() -> None:
     markdown = render_markdown_report(sample_summary(), precision=0)
 
-    assert "| 1 | `#112233` | `17, 34, 51` | 50% | 0 | white | dark |" in markdown
-    assert "| 2 | `#eeeeee` | `238, 238, 238` | 50% | 1 | black | light |" in markdown
+    assert (
+        "| 1 | `#112233` | `17, 34, 51` | 50% | 0 | "
+        "black 1:1; white 16:1 | white | dark |"
+    ) in markdown
+    assert (
+        "| 2 | `#eeeeee` | `238, 238, 238` | 50% | 1 | "
+        "black 18:1; white 1:1 | black | light |"
+    ) in markdown
 
 
 def test_markdown_report_includes_color_names_only_when_present() -> None:
     unnamed_markdown = render_markdown_report(sample_summary())
     named_markdown = render_markdown_report(named_summary())
 
-    assert "| Rank | Color | RGB | Percent | Luminance | Text | Label |" in (
+    assert "| Rank | Color | RGB | Percent | Luminance | Contrast | Text | Label |" in (
         unnamed_markdown
     )
-    assert "| Rank | Color | Name | RGB | Percent | Luminance | Text | Label |" in (
-        named_markdown
+    assert (
+        "| Rank | Color | Name | RGB | Percent | Luminance | Contrast | Text | Label |"
+        in (named_markdown)
     )
     assert "| 1 | `#112233` | blue | `17, 34, 51` |" in named_markdown
 
@@ -456,16 +485,24 @@ def test_text_report_renders_paste_friendly_palette_sheet() -> None:
         "cluster distance 0; sort frequency; ignored color #ffffff; names included\n"
         "\n"
         "Swatches:\n"
-        "1. #112233 | rgb(17, 34, 51) | 50.0% | dark | text white | name blue\n"
-        "2. #eeeeee | rgb(238, 238, 238) | 50.0% | light | text black | name gray\n"
+        "1. #112233 | rgb(17, 34, 51) | 50.0% | dark | "
+        "contrast black 1.3:1 white 16.15:1 | text white | name blue\n"
+        "2. #eeeeee | rgb(238, 238, 238) | 50.0% | light | "
+        "contrast black 18.1:1 white 1.16:1 | text black | name gray\n"
     )
 
 
 def test_text_report_applies_requested_precision() -> None:
     text = render_text_report(sample_summary(), precision=2)
 
-    assert "1. #112233 | rgb(17, 34, 51) | 50.00% | dark | text white\n" in text
-    assert "2. #eeeeee | rgb(238, 238, 238) | 50.00% | light | text black\n" in text
+    assert (
+        "1. #112233 | rgb(17, 34, 51) | 50.00% | dark | "
+        "contrast black 1.30:1 white 16.15:1 | text white\n"
+    ) in text
+    assert (
+        "2. #eeeeee | rgb(238, 238, 238) | 50.00% | light | "
+        "contrast black 18.10:1 white 1.16:1 | text black\n"
+    ) in text
 
 
 def test_text_report_sanitizes_multiline_title_source_label_and_names() -> None:
@@ -480,7 +517,7 @@ def test_text_report_sanitizes_multiline_title_source_label_and_names() -> None:
     assert "Source: sample story.png\n" in text
     assert (
         "1. #112233 | rgb(17, 34, 51) | 50.0% | dark cool ink | "
-        "text white | name steel blue ink\n"
+        "contrast black 1.3:1 white 16.15:1 | text white | name steel blue ink\n"
     ) in text
 
 

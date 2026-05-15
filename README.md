@@ -7,17 +7,17 @@
 
 ## Problem and Motivation
 
-Screenshots, covers, posters, and teaching images often contain useful color information, but quick palette tools can be too web-service-oriented or only return raw hex values. `swatch-story` keeps images on your machine and adds proportions, luminance labels, and readable black/white text guidance so the output is useful in design notes, documentation, lessons, and small creative workflows.
+Screenshots, covers, posters, and teaching images often contain useful color information, but quick palette tools can be too web-service-oriented or only return raw hex values. `swatch-story` keeps images on your machine and adds proportions, luminance labels, and black/white contrast ratios so the output is useful in design notes, documentation, lessons, and small creative workflows.
 
 ## Features
 
 - Deterministic palette extraction from local image files with Pillow.
-- JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, readable black/white text choice, and a lightness label.
+- JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, black and white text contrast ratios, readable text choice, and a lightness label.
 - UTF-8 CSV output with stable columns for spreadsheet sorting, filtering, and lightweight data workflows.
-- CSS custom property output with hex, RGB triplets, and readable text-color variables.
+- CSS custom property output with hex, RGB triplets, black/white contrast ratios, and readable text-color variables.
 - Portable Markdown reports with palette metadata and a table for notes and docs.
 - Plain-text palette sheets with source metadata, extraction settings, and one paste-friendly line per swatch for emails, tickets, and lesson notes.
-- Standalone SVG swatch sheets with source metadata, extraction settings, color blocks, HEX values, optional names, percentages, luminance, labels, and readable text-color guidance for docs and slides.
+- Standalone SVG swatch sheets with source metadata, extraction settings, color blocks, HEX values, optional names, percentages, luminance, black/white contrast ratios, labels, and readable text-color guidance for docs and slides.
 - Deterministic GIMP `.gpl` palette output for design-tool interoperability.
 - Deterministic Adobe Swatch Exchange `.ase` output with RGB swatches grouped by report title.
 - Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
@@ -26,7 +26,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
 - `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
-- `--precision N` formats report percentages and relative luminance values with 0 to 6 decimal places for JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
+- `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
@@ -119,7 +119,7 @@ Sort selected chromatic swatches by hue angle, with grayscale colors after chrom
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-Round report percentages and relative luminance values for compact review output:
+Round report percentages, relative luminance values, and contrast ratios for compact review output:
 
 ```bash
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
@@ -135,9 +135,9 @@ The compare command prints a concise terminal report with the before and after p
 
 The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review with compact CSS-only side-by-side palette preview strips for each image. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, filtered changed-color delta details, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
 
-The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, readable text color, and contrast guidance.
+The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance.
 
-The SVG report is a standalone local swatch sheet for docs and slides. It shows the title, source filename, image dimensions, extraction settings, and one row per swatch with a color rectangle, HEX, optional approximate name, percent, luminance, label, and readable text color. User-derived title, source, labels, and names are XML-escaped, and the source image itself is not embedded.
+The SVG report is a standalone local swatch sheet for docs and slides. It shows the title, source filename, image dimensions, extraction settings, and one row per swatch with a color rectangle, HEX, optional approximate name, percent, luminance, black/white contrast ratios, label, and readable text color. User-derived title, source, labels, and names are XML-escaped, and the source image itself is not embedded.
 
 Create CSS custom properties for use in a stylesheet:
 
@@ -188,6 +188,8 @@ Example CSS output:
 :root {
   --swatch-story-color-1: #112233;
   --swatch-story-color-1-rgb: 17, 34, 51;
+  --swatch-story-color-1-contrast-black: 1.3;
+  --swatch-story-color-1-contrast-white: 16.15;
   --swatch-story-color-1-text: white;
 }
 ```
@@ -202,12 +204,14 @@ Example palette entry:
   "count": 120,
   "percent": 32.43,
   "luminance": 0.015,
+  "contrast_with_black": 1.3,
+  "contrast_with_white": 16.15,
   "best_text_color": "white",
   "label": "dark"
 }
 ```
 
-JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels.
+Contrast ratios use the WCAG formula `(lighter + 0.05) / (darker + 0.05)` from relative luminance, comparing each swatch against black luminance `0` and white luminance `1`. `best_text_color` is the higher-contrast option. JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels.
 
 Example compare JSON output:
 
@@ -259,8 +263,8 @@ Drift score: 66.67%
 Example CSV output:
 
 ```csv
-rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
-1,#112233,17,34,51,120,32.43,0.015,white,dark,
+rank,hex,r,g,b,count,percent,luminance,contrast_with_black,contrast_with_white,best_text_color,label,name
+1,#112233,17,34,51,120,32.43,0.015,1.3,16.15,white,dark,
 ```
 
 Example plain-text output:
@@ -273,8 +277,8 @@ Image size: 1200 x 800 px
 Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
 
 Swatches:
-1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
-2. #eeeeee | rgb(238, 238, 238) | 18.25% | light | text black
+1. #112233 | rgb(17, 34, 51) | 32.43% | dark | contrast black 1.3:1 white 16.15:1 | text white
+2. #eeeeee | rgb(238, 238, 238) | 18.25% | light | contrast black 18.1:1 white 1.16:1 | text black
 ```
 
 Example GIMP palette output:
@@ -298,6 +302,8 @@ With `--names`, palette entries include an extra approximate common-name hint:
   "count": 120,
   "percent": 32.43,
   "luminance": 0.015,
+  "contrast_with_black": 1.3,
+  "contrast_with_white": 16.15,
   "best_text_color": "white",
   "label": "dark",
   "name": "black"
@@ -310,12 +316,12 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 - `--colors N`: number of colors to report, from 2 to 12. Default: 6.
 - `--json PATH`: write a JSON report.
-- `--csv PATH`: write a UTF-8 CSV report with stable columns: `rank`, `hex`, `r`, `g`, `b`, `count`, `percent`, `luminance`, `best_text_color`, `label`, and `name`.
+- `--csv PATH`: write a UTF-8 CSV report with stable columns: `rank`, `hex`, `r`, `g`, `b`, `count`, `percent`, `luminance`, `contrast_with_black`, `contrast_with_white`, `best_text_color`, `label`, and `name`.
 - `--css PATH`: write CSS custom properties.
 - `--html PATH`: write a standalone HTML report.
 - `--markdown PATH`: write a portable Markdown report.
-- `--text PATH`: write a UTF-8 plain-text palette sheet with title, source filename, image size, extraction settings, and one line per swatch containing rank, hex, RGB triplet, percent, label, best text color, and optional name hint.
-- `--svg PATH`: write a deterministic UTF-8 standalone SVG swatch sheet with title, source filename, image size, extraction settings, and one row per swatch containing a color rectangle, HEX, optional name hint, percent, luminance, label, and readable text color.
+- `--text PATH`: write a UTF-8 plain-text palette sheet with title, source filename, image size, extraction settings, and one line per swatch containing rank, hex, RGB triplet, percent, label, black/white contrast ratios, best text color, and optional name hint.
+- `--svg PATH`: write a deterministic UTF-8 standalone SVG swatch sheet with title, source filename, image size, extraction settings, and one row per swatch containing a color rectangle, HEX, optional name hint, percent, luminance, black/white contrast ratios, label, and readable text color.
 - `--gpl PATH`: write a deterministic GIMP `.gpl` palette.
 - `--ase PATH`: write a deterministic Adobe Swatch Exchange `.ase` palette.
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
@@ -323,7 +329,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
 - `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
-- `--precision N`: format user-facing report percentages and relative luminance values with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
+- `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
 - `--title TEXT`: title for HTML, Markdown, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 

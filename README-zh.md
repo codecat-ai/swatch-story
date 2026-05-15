@@ -7,17 +7,17 @@
 
 ## 问题与动机
 
-截图、封面、海报和教学图片里常常包含有用的色彩信息，但快速调色板工具有时偏向在线服务，或者只返回原始十六进制颜色。`swatch-story` 会把图片留在本机，并补充占比、亮度标签、黑/白可读文字建议，让输出更适合设计笔记、文档、课程和小型创作流程。
+截图、封面、海报和教学图片里常常包含有用的色彩信息，但快速调色板工具有时偏向在线服务，或者只返回原始十六进制颜色。`swatch-story` 会把图片留在本机，并补充占比、亮度标签、黑/白文字对比度，让输出更适合设计笔记、文档、课程和小型创作流程。
 
 ## 功能
 
 - 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
-- JSON 输出包含源文件名、源文件路径、图像尺寸、提取设置、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、可读的黑/白文字选择，以及明暗标签。
+- JSON 输出包含源文件名、源文件路径、图像尺寸、提取设置、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、黑/白文字对比度、可读文字选择以及明暗标签。
 - UTF-8 CSV 输出提供稳定列，便于在电子表格中排序、筛选，也适合轻量数据流程。
-- CSS 自定义属性输出包含十六进制颜色、RGB 三元组和可读文字颜色变量。
+- CSS 自定义属性输出包含十六进制颜色、RGB 三元组、黑/白对比度和可读文字颜色变量。
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
 - 纯文本调色板单页包含源文件元数据、提取设置，以及每个色块一行的易粘贴内容，适合邮件、工单和课程笔记。
-- 独立 SVG 色块单页包含源文件元数据、提取设置、色块、HEX 值、可选名称、占比、亮度、标签和可读文字颜色建议，适合文档和幻灯片。
+- 独立 SVG 色块单页包含源文件元数据、提取设置、色块、HEX 值、可选名称、占比、亮度、黑/白对比度、标签和可读文字颜色建议，适合文档和幻灯片。
 - 确定性的 GIMP `.gpl` 调色板输出，便于与设计工具互操作。
 - 确定性的 Adobe Swatch Exchange `.ase` 输出，按报告标题分组 RGB 色块。
 - 独立 HTML 联系表报告包含图像元数据、提取设置、可访问的色块卡片、已转义的用户来源值，以及适合在浏览器审阅或设计评审中使用的对比度建议。
@@ -26,7 +26,7 @@
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
 - `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
-- `--precision N` 可把 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比与相对亮度格式化为 0 到 6 位小数；省略时保持现有默认输出。
+- `--precision N` 可把 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
 - 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
@@ -119,7 +119,7 @@ swatch-story poster.png --colors 6 --sort luminance --html poster-luminance.html
 swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 ```
 
-为紧凑审阅输出舍入报告占比和相对亮度：
+为紧凑审阅输出舍入报告占比、相对亮度和对比度：
 
 ```bash
 swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
@@ -135,9 +135,9 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta
 
 对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
 
-HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、可读文字颜色和对比度建议。
+HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。
 
-SVG 报告是适合文档和幻灯片的独立本地色块单页。它会显示标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选近似名称、占比、亮度、标签和可读文字颜色。用户来源的标题、源文件名、标签和名称都会进行 XML 转义，并且不会嵌入源图片本身。
+SVG 报告是适合文档和幻灯片的独立本地色块单页。它会显示标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选近似名称、占比、亮度、黑/白对比度、标签和可读文字颜色。用户来源的标题、源文件名、标签和名称都会进行 XML 转义，并且不会嵌入源图片本身。
 
 创建可在样式表中使用的 CSS 自定义属性：
 
@@ -188,6 +188,8 @@ CSS 输出示例：
 :root {
   --swatch-story-color-1: #112233;
   --swatch-story-color-1-rgb: 17, 34, 51;
+  --swatch-story-color-1-contrast-black: 1.3;
+  --swatch-story-color-1-contrast-white: 16.15;
   --swatch-story-color-1-text: white;
 }
 ```
@@ -202,16 +204,20 @@ CSS 输出示例：
   "count": 120,
   "percent": 32.43,
   "luminance": 0.015,
+  "contrast_with_black": 1.3,
+  "contrast_with_white": 16.15,
   "best_text_color": "white",
   "label": "dark"
 }
 ```
 
+对比度使用基于相对亮度的 WCAG 公式 `(lighter + 0.05) / (darker + 0.05)`，把每个色块分别与黑色亮度 `0` 和白色亮度 `1` 比较。`best_text_color` 是对比度更高的选项。
+
 CSV 输出示例：
 
 ```csv
-rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name
-1,#112233,17,34,51,120,32.43,0.015,white,dark,
+rank,hex,r,g,b,count,percent,luminance,contrast_with_black,contrast_with_white,best_text_color,label,name
+1,#112233,17,34,51,120,32.43,0.015,1.3,16.15,white,dark,
 ```
 
 纯文本输出示例：
@@ -224,8 +230,8 @@ Image size: 1200 x 800 px
 Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
 
 Swatches:
-1. #112233 | rgb(17, 34, 51) | 32.43% | dark | text white
-2. #eeeeee | rgb(238, 238, 238) | 18.25% | light | text black
+1. #112233 | rgb(17, 34, 51) | 32.43% | dark | contrast black 1.3:1 white 16.15:1 | text white
+2. #eeeeee | rgb(238, 238, 238) | 18.25% | light | contrast black 18.1:1 white 1.16:1 | text black
 ```
 
 GIMP 调色板输出示例：
@@ -249,6 +255,8 @@ Columns: 2
   "count": 120,
   "percent": 32.43,
   "luminance": 0.015,
+  "contrast_with_black": 1.3,
+  "contrast_with_white": 16.15,
   "best_text_color": "white",
   "label": "dark",
   "name": "black"
@@ -310,12 +318,12 @@ Drift score: 66.67%
 
 - `--colors N`：报告的颜色数量，范围为 2 到 12。默认值：6。
 - `--json PATH`：写入 JSON 报告。
-- `--csv PATH`：写入 UTF-8 CSV 报告，包含稳定列：`rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`best_text_color`、`label` 和 `name`。
+- `--csv PATH`：写入 UTF-8 CSV 报告，包含稳定列：`rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`contrast_with_black`、`contrast_with_white`、`best_text_color`、`label` 和 `name`。
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
 - `--markdown PATH`：写入便携 Markdown 报告。
-- `--text PATH`：写入 UTF-8 纯文本调色板单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的排名、十六进制颜色、RGB 三元组、占比、标签、最佳文字颜色和可选名称提示。
-- `--svg PATH`：写入确定性的 UTF-8 独立 SVG 色块单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选名称提示、占比、亮度、标签和可读文字颜色。
+- `--text PATH`：写入 UTF-8 纯文本调色板单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的排名、十六进制颜色、RGB 三元组、占比、标签、黑/白对比度、最佳文字颜色和可选名称提示。
+- `--svg PATH`：写入确定性的 UTF-8 独立 SVG 色块单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选名称提示、占比、亮度、黑/白对比度、标签和可读文字颜色。
 - `--gpl PATH`：写入确定性的 GIMP `.gpl` 调色板。
 - `--ase PATH`：写入确定性的 Adobe Swatch Exchange `.ase` 调色板。
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
@@ -323,7 +331,7 @@ Drift score: 66.67%
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
 - `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
-- `--precision N`：把面向用户的报告占比和相对亮度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
+- `--precision N`：把面向用户的报告占比、相对亮度和对比度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
 - `--title TEXT`：HTML、Markdown、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 

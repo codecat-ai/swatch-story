@@ -75,11 +75,18 @@ def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
     summary = json.loads(json_path.read_text(encoding="utf-8"))
     assert [entry["percent"] for entry in summary["palette"]] == [66.7, 33.3]
     assert [entry["luminance"] for entry in summary["palette"]] == [0.2, 0.1]
-    assert ",66.7,0.2," in csv_path.read_text(encoding="utf-8")
-    assert "| 66.7% | 0.2 |" in markdown_path.read_text(encoding="utf-8")
+    assert [entry["contrast_with_black"] for entry in summary["palette"]] == [5.3, 2.4]
+    assert [entry["contrast_with_white"] for entry in summary["palette"]] == [4.0, 8.6]
+    assert ",66.7,0.2,5.3,4.0," in csv_path.read_text(encoding="utf-8")
+    assert "| 66.7% | 0.2 | black 5.3:1; white 4.0:1 |" in (
+        markdown_path.read_text(encoding="utf-8")
+    )
     assert "| 66.7% |" in text_path.read_text(encoding="utf-8")
+    assert "contrast black 5.3:1 white 4.0:1" in text_path.read_text(encoding="utf-8")
     assert "<dd>66.7% of sampled pixels</dd>" in html_path.read_text(encoding="utf-8")
-    assert "66.7%" in capsys.readouterr().out
+    console = capsys.readouterr().out
+    assert "66.7%" in console
+    assert "contrast:black 5.3:1 white 4.0:1" in console
 
 
 def test_cli_writes_svg_report_with_names_title_and_precision(
@@ -884,6 +891,12 @@ def test_cli_writes_css_custom_properties(tmp_path: Path, capsys) -> None:
         f"--swatch-story-color-1-rgb: "
         f"{first['rgb'][0]}, {first['rgb'][1]}, {first['rgb'][2]};"
     ) in css
+    assert (
+        f"--swatch-story-color-1-contrast-black: {first['contrast_with_black']};"
+    ) in css
+    assert (
+        f"--swatch-story-color-1-contrast-white: {first['contrast_with_white']};"
+    ) in css
     assert f"--swatch-story-color-1-text: {first['best_text_color']};" in css
     assert f"--swatch-story-color-2: {second['hex']};" in css
     assert first["hex"] in capsys.readouterr().out
@@ -913,7 +926,8 @@ def test_cli_writes_csv_report_with_blank_names_by_default(
     assert exit_code == 0
     lines = csv_path.read_text(encoding="utf-8").splitlines()
     assert (
-        lines[0] == "rank,hex,r,g,b,count,percent,luminance,best_text_color,label,name"
+        lines[0] == "rank,hex,r,g,b,count,percent,luminance,contrast_with_black,"
+        "contrast_with_white,best_text_color,label,name"
     )
     assert lines[1].endswith(",")
     assert lines[2].endswith(",")
@@ -942,8 +956,8 @@ def test_cli_writes_csv_report_with_names(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     csv = csv_path.read_text(encoding="utf-8")
-    assert "1,#0000ff,0,0,255,1,50.0,0.072,white,dark,blue\n" in csv
-    assert "2,#ff0000,255,0,0,1,50.0,0.213,black,dark,red\n" in csv
+    assert "1,#0000ff,0,0,255,1,50.0,0.072,2.44,8.61,white,dark,blue\n" in csv
+    assert "2,#ff0000,255,0,0,1,50.0,0.213,5.26,3.99,black,dark,red\n" in csv
     assert "#ff0000" in capsys.readouterr().out
 
 
@@ -971,7 +985,11 @@ def test_cli_writes_markdown_report(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     markdown = markdown_path.read_text(encoding="utf-8")
     assert markdown.startswith("# CLI Story\n")
-    assert "| Rank | Color | RGB | Percent | Luminance | Text | Label |" in markdown
+    assert (
+        "| Rank | Color | RGB | Percent | Luminance | Contrast | Text | Label |"
+        in markdown
+    )
+    assert "black 5.26:1; white 3.99:1" in markdown
     assert "#ff0000" in markdown
     assert "#ff0000" in capsys.readouterr().out
 
@@ -1006,7 +1024,10 @@ def test_cli_writes_text_report_and_prints_summary(tmp_path: Path, capsys) -> No
         "Settings: colors 2; sample step 1; sample limit 10000; "
         "cluster distance 0; sort frequency; ignored color none; names included\n"
     ) in text
-    assert "1. #0000ff | rgb(0, 0, 255) | 50.0% | dark | text white | name blue" in text
+    assert (
+        "1. #0000ff | rgb(0, 0, 255) | 50.0% | dark | "
+        "contrast black 2.44:1 white 8.61:1 | text white | name blue"
+    ) in text
     assert "#ff0000" in capsys.readouterr().out
 
 

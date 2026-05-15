@@ -9,8 +9,6 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from swatch_story.palette import contrast_ratio
-
 
 def write_json_report(
     summary: dict[str, Any], output_path: str | Path, *, precision: int | None = None
@@ -33,6 +31,8 @@ CSV_HEADER = [
     "count",
     "percent",
     "luminance",
+    "contrast_with_black",
+    "contrast_with_white",
     "best_text_color",
     "label",
     "name",
@@ -60,6 +60,8 @@ def render_csv_report(summary: dict[str, Any], *, precision: int | None = None) 
                 entry["count"],
                 _format_decimal(entry["percent"], precision),
                 _format_decimal(entry["luminance"], precision),
+                _format_decimal(entry["contrast_with_black"], precision),
+                _format_decimal(entry["contrast_with_white"], precision),
                 entry["best_text_color"],
                 entry["label"],
                 entry.get("name", ""),
@@ -142,6 +144,14 @@ def render_css_report(summary: dict[str, Any]) -> str:
             [
                 f"  --swatch-story-color-{rank}: {entry['hex']};",
                 f"  --swatch-story-color-{rank}-rgb: {rgb};",
+                (
+                    f"  --swatch-story-color-{rank}-contrast-black: "
+                    f"{entry['contrast_with_black']};"
+                ),
+                (
+                    f"  --swatch-story-color-{rank}-contrast-white: "
+                    f"{entry['contrast_with_white']};"
+                ),
                 f"  --swatch-story-color-{rank}-text: {entry['best_text_color']};",
             ]
         )
@@ -198,11 +208,14 @@ def render_markdown_report(
     cluster_distance = markdown_escape(str(settings.get("cluster_distance", 0)))
     palette = summary["palette"]
     include_names = any("name" in entry for entry in palette)
-    header = "| Rank | Color | RGB | Percent | Luminance | Text | Label |"
-    divider = "| ---: | --- | --- | ---: | ---: | --- | --- |"
+    header = "| Rank | Color | RGB | Percent | Luminance | Contrast | Text | Label |"
+    divider = "| ---: | --- | --- | ---: | ---: | --- | --- | --- |"
     if include_names:
-        header = "| Rank | Color | Name | RGB | Percent | Luminance | Text | Label |"
-        divider = "| ---: | --- | --- | --- | ---: | ---: | --- | --- |"
+        header = (
+            "| Rank | Color | Name | RGB | Percent | Luminance | Contrast | "
+            "Text | Label |"
+        )
+        divider = "| ---: | --- | --- | --- | ---: | ---: | --- | --- | --- |"
     lines = [
         f"# {markdown_escape(title)}",
         "",
@@ -227,6 +240,7 @@ def render_markdown_report(
                 f"`{markdown_escape(rgb)}`",
                 f"{_format_decimal(entry['percent'], precision)}%",
                 _format_decimal(entry["luminance"], precision),
+                _format_contrast_pair(entry, precision, separator="; "),
                 markdown_escape(entry["best_text_color"]),
                 markdown_escape(entry["label"]),
             ]
@@ -301,6 +315,7 @@ def render_text_report(
             f"rgb({red}, {green}, {blue}) | "
             f"{_format_decimal(entry['percent'], precision)}% | "
             f"{_single_line(entry['label'])} | "
+            f"contrast {_format_contrast_pair(entry, precision)} | "
             f"text {_single_line(entry['best_text_color'])}"
         )
         if "name" in entry:
@@ -417,6 +432,7 @@ def _render_svg_swatch(
         (
             f"{_format_decimal(entry['percent'], precision)}% | "
             f"Luminance {_format_decimal(entry['luminance'], precision)} | "
+            f"Contrast {_format_contrast_pair(entry, precision, separator='; ')} | "
             f"Label {_single_line(entry['label'])} | "
             f"Text {_single_line(entry['best_text_color'])}"
         ),
@@ -669,11 +685,16 @@ def render_swatch(entry: dict[str, Any], *, precision: int | None = None) -> str
     label = escape(entry["label"])
     rgb = ", ".join(str(value) for value in entry["rgb"])
     style = escape(f"background: {entry['hex']}; color: {entry['best_text_color']}")
-    contrast = contrast_ratio(
-        tuple(entry["rgb"]),
-        (0, 0, 0) if entry["best_text_color"] == "black" else (255, 255, 255),
+    contrast_black = float(entry["contrast_with_black"])
+    contrast_white = float(entry["contrast_with_white"])
+    contrast = max(contrast_black, contrast_white)
+    contrast_text = escape(f"{_format_decimal(contrast, precision)}:1")
+    black_contrast_text = escape(
+        f"{_format_decimal(entry['contrast_with_black'], precision)}:1"
     )
-    contrast_text = escape(f"{contrast:.2f}:1")
+    white_contrast_text = escape(
+        f"{_format_decimal(entry['contrast_with_white'], precision)}:1"
+    )
     guidance = "WCAG AA for normal text" if contrast >= 4.5 else "Use for large text"
     name_line = ""
     if "name" in entry:
@@ -701,6 +722,10 @@ def render_swatch(entry: dict[str, Any], *, precision: int | None = None) -> str
               <dd>Use {text_color} text</dd>
               <dt>Contrast ratio</dt>
               <dd>{contrast_text}; {guidance}</dd>
+              <dt>Black contrast</dt>
+              <dd>{black_contrast_text}</dd>
+              <dt>White contrast</dt>
+              <dd>{white_contrast_text}</dd>
             </dl>
           </div>
         </div>
@@ -728,6 +753,14 @@ def _format_decimal(value: object, precision: int | None) -> str:
     return f"{float(value):.{precision}f}"
 
 
+def _format_contrast_pair(
+    entry: dict[str, Any], precision: int | None, *, separator: str = " "
+) -> str:
+    black = _format_decimal(entry["contrast_with_black"], precision)
+    white = _format_decimal(entry["contrast_with_white"], precision)
+    return f"black {black}:1{separator}white {white}:1"
+
+
 def _summary_with_precision(
     summary: dict[str, Any], precision: int | None
 ) -> dict[str, Any]:
@@ -737,4 +770,10 @@ def _summary_with_precision(
     for entry in report_summary["palette"]:
         entry["percent"] = round(float(entry["percent"]), precision)
         entry["luminance"] = round(float(entry["luminance"]), precision)
+        entry["contrast_with_black"] = round(
+            float(entry["contrast_with_black"]), precision
+        )
+        entry["contrast_with_white"] = round(
+            float(entry["contrast_with_white"]), precision
+        )
     return report_summary

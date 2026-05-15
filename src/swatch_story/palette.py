@@ -44,6 +44,8 @@ class PaletteEntry:
     count: int
     percent: float
     luminance: float
+    contrast_with_black: float
+    contrast_with_white: float
     best_text_color: str
     label: str
 
@@ -59,6 +61,8 @@ class PaletteEntry:
             "count": self.count,
             "percent": self.percent,
             "luminance": self.luminance,
+            "contrast_with_black": self.contrast_with_black,
+            "contrast_with_white": self.contrast_with_white,
             "best_text_color": self.best_text_color,
             "label": self.label,
         }
@@ -127,9 +131,17 @@ def contrast_ratio(
 ) -> float:
     first = relative_luminance(first_rgb)
     second = relative_luminance(second_rgb)
+    return contrast_ratio_from_luminance(first, second)
+
+
+def contrast_ratio_from_luminance(first: float, second: float) -> float:
     light = max(first, second)
     dark = min(first, second)
     return (light + 0.05) / (dark + 0.05)
+
+
+def rounded_contrast_ratio(first: float, second: float) -> float:
+    return round(contrast_ratio_from_luminance(first, second), 2)
 
 
 def best_text_color(rgb: tuple[int, int, int]) -> str:
@@ -333,6 +345,8 @@ def build_palette(
     entries = []
     for rank, (rgb, count) in enumerate(ranked[:colors], start=1):
         luminance = relative_luminance(rgb)
+        contrast_with_black = rounded_contrast_ratio(luminance, 0)
+        contrast_with_white = rounded_contrast_ratio(luminance, 1)
         entries.append(
             PaletteEntry(
                 rank=rank,
@@ -340,6 +354,8 @@ def build_palette(
                 count=count,
                 percent=round((count / total) * 100, 2),
                 luminance=luminance,
+                contrast_with_black=contrast_with_black,
+                contrast_with_white=contrast_with_white,
                 best_text_color=best_text_color(rgb),
                 label=lightness_label(luminance),
             )
