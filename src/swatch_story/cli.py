@@ -61,6 +61,18 @@ def precision_value(value: str) -> int:
     return precision
 
 
+def min_delta_percent_value(value: str) -> float:
+    try:
+        percent = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "--min-delta-percent must be a number"
+        ) from exc
+    if percent < 0:
+        raise argparse.ArgumentTypeError("--min-delta-percent must be 0 or greater")
+    return percent
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
@@ -130,6 +142,16 @@ def build_compare_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--text", dest="text_path", help="Write plain-text report to PATH"
+    )
+    parser.add_argument(
+        "--min-delta-percent",
+        type=min_delta_percent_value,
+        default=0.0,
+        metavar="N",
+        help=(
+            "Only include shared-color delta detail rows when the absolute "
+            "percentage change is at least N. Default: 0.0."
+        ),
     )
     return parser
 
@@ -319,7 +341,11 @@ def compare_main(argv: Sequence[str]) -> int:
         print(f"swatch-story: {exc}", file=sys.stderr)
         return 2
 
-    report = compare_summaries(before_summary, after_summary)
+    report = compare_summaries(
+        before_summary,
+        after_summary,
+        min_delta_percent=args.min_delta_percent,
+    )
     if args.json_path:
         write_compare_json(report, args.json_path)
     if args.csv_path:

@@ -122,12 +122,12 @@ swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --mar
 对比两张本地图像，并写入 JSON、CSV、HTML、Markdown 和纯文本漂移报告：
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
-`compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。
+`compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色、共有颜色占比变化和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。使用 `--min-delta-percent N` 可以隐藏绝对占比变化小于 `N` 的共有颜色明细行；新增和移除颜色仍会报告。
 
-对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
+对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
 
 HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、可读文字颜色和对比度建议。
 
@@ -268,6 +268,14 @@ JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster
   "shared": ["#eeeeee"],
   "added": ["#445566"],
   "removed": ["#112233"],
+  "changed": [
+    {
+      "hex": "#eeeeee",
+      "before_percent": 20.0,
+      "after_percent": 23.5,
+      "delta_percent": 3.5
+    }
+  ],
   "drift_score": 66.67
 }
 ```
@@ -286,6 +294,7 @@ After dominant colors: #445566, #eeeeee
 Shared colors: #eeeeee
 Added colors: #445566
 Removed colors: #112233
+Changed colors: #eeeeee (20.0% to 23.5%, +3.5%)
 Drift score: 66.67%
 ```
 
@@ -312,7 +321,7 @@ Drift score: 66.67%
 - `--title TEXT`：HTML、Markdown、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据以及共有/新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
 `swatch-story gallery OUT_DIR [--no-index] [--force]` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令的 Markdown `README.md` gallery。除非提供 `--force`，否则它会拒绝覆盖已有 gallery 文件。
 
