@@ -29,7 +29,7 @@
 - `--precision N` 可把 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比与相对亮度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
-- 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG，并可选写入 Markdown 索引，用于教学调色板提取和报告命令。
+- 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
 
 ## 安装
 
@@ -55,7 +55,7 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 swatch-story gallery demo-gallery
 ```
 
-gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令。
+gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令。当课程材料或测试需要包含预期主色和调色板十六进制值的 `demo-gallery/manifest.json` 时，可以添加 `--manifest`。
 
 ## 示例
 
@@ -63,6 +63,12 @@ gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/READ
 
 ```bash
 swatch-story gallery demo-gallery --no-index
+```
+
+生成 PNG 素材和机器可读清单，但不生成 Markdown 索引：
+
+```bash
+swatch-story gallery demo-gallery --manifest --no-index
 ```
 
 只创建 JSON 报告：
@@ -323,7 +329,7 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
-`swatch-story gallery OUT_DIR [--no-index] [--force]` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令的 Markdown `README.md` gallery。除非提供 `--force`，否则它会拒绝覆盖已有 gallery 文件。
+`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force]` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、预期主色和预期调色板十六进制值。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 
 MVP 不读取配置文件，也不会获取远程图片。
 
@@ -339,7 +345,7 @@ python -m build
 
 ## 测试
 
-测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染和 CLI 文件输出。
+测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染、gallery 清单内容和 CLI 文件输出。
 
 ```bash
 pytest -q
@@ -347,7 +353,7 @@ pytest -q
 
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
-- 为生成的 gallery 素材提供可选 JSON 清单，让课程无需重新解析 Markdown 就能断言预期主色。
+- 为 gallery 示例素材添加可选主题标签，例如 warm、cool、contrast 和 accessibility 示例。
 - 对比报告中可选的单色占比变化阈值，便于在审阅时隐藏较小的百分比变化。
 
 ## 贡献

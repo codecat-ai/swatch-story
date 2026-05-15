@@ -29,7 +29,7 @@
 - `--precision N` により、JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合と相対輝度を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
-- ソースチェックアウト内で、小さな決定的 PNG と任意の Markdown 索引を含むサンプル素材ギャラリーを生成し、パレット抽出とレポートコマンドの教材に使えます。
+- ソースチェックアウト内で、小さな決定的 PNG、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
 
 ## インストール
 
@@ -55,7 +55,7 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 swatch-story gallery demo-gallery
 ```
 
-gallery コマンドは小さな決定的 PNG ファイルと `demo-gallery/README.md` を書き出します。README には、それらのサンプルからパレットやレポートを作るコマンドが含まれます。
+gallery コマンドは小さな決定的 PNG ファイルと `demo-gallery/README.md` を書き出します。README には、それらのサンプルからパレットやレポートを作るコマンドが含まれます。教材やテストで期待される主要色とパレット HEX 値を含む `demo-gallery/manifest.json` が必要な場合は、`--manifest` を追加します。
 
 ## 例
 
@@ -63,6 +63,12 @@ Markdown 索引なしでサンプル PNG 素材だけを生成します。
 
 ```bash
 swatch-story gallery demo-gallery --no-index
+```
+
+Markdown 索引なしで、PNG 素材と機械可読マニフェストを生成します。
+
+```bash
+swatch-story gallery demo-gallery --manifest --no-index
 ```
 
 JSON レポートだけを作成します。
@@ -323,7 +329,7 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
-`swatch-story gallery OUT_DIR [--no-index] [--force]` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドを含む Markdown `README.md` gallery も生成します。`--force` がない限り、既存の gallery ファイルは上書きしません。
+`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force]` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドを含む Markdown `README.md` gallery も生成します。`--manifest` は、schema version `1`、generator 名、サンプルファイル名、寸法、ストーリー、期待される主要色、期待されるパレット HEX 値を含む決定的な UTF-8 `manifest.json` も書き出します。`--no-index` は `README.md` だけを省略するため、`--manifest` と組み合わせられます。`--force` がない限り、`manifest.json` を含む既存の gallery ファイルは上書きしません。
 
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
 
@@ -339,7 +345,7 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、CLI ファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、gallery マニフェスト内容、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
@@ -347,7 +353,7 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- 生成された gallery 素材向けの任意 JSON マニフェストにより、教材が Markdown を再解析せずに期待される主要色を検証できるようにする。
+- warm、cool、contrast、accessibility などの授業テーマ向けに、gallery 素材へ任意のタグを付けられるようにする。
 - 比較レポートで任意の色ごとの割合差しきい値を指定し、小さな割合変化を確認時に隠せるようにする。
 
 ## コントリビュート

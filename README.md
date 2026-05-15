@@ -29,7 +29,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--precision N` formats report percentages and relative luminance values with 0 to 6 decimal places for JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
-- Source-checkout sample fixture gallery generation with tiny deterministic PNGs and an optional Markdown index for teaching palette extraction and report commands.
+- Source-checkout sample fixture gallery generation with tiny deterministic PNGs, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
 ## Installation
 
@@ -55,7 +55,7 @@ Generate local teaching fixtures from the same source checkout:
 swatch-story gallery demo-gallery
 ```
 
-The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands for extracting palettes and reports from those samples.
+The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands for extracting palettes and reports from those samples. Add `--manifest` when lesson material or tests need `demo-gallery/manifest.json` with expected dominant colors and palette hex values.
 
 ## Examples
 
@@ -63,6 +63,12 @@ Generate only the sample PNG fixtures without the Markdown index:
 
 ```bash
 swatch-story gallery demo-gallery --no-index
+```
+
+Generate PNG fixtures plus a machine-readable manifest without the Markdown index:
+
+```bash
+swatch-story gallery demo-gallery --manifest --no-index
 ```
 
 Create only a JSON report:
@@ -323,7 +329,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
-`swatch-story gallery OUT_DIR [--no-index] [--force]` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands. It refuses to overwrite existing gallery files unless `--force` is provided.
+`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force]` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, expected dominant colors, and expected palette hex values. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 
 The MVP does not read a config file and does not fetch remote images.
 
@@ -339,7 +345,7 @@ python -m build
 
 ## Testing
 
-The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, report rendering, and CLI file output.
+The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, report rendering, gallery manifest content, and CLI file output.
 
 ```bash
 pytest -q
@@ -347,7 +353,7 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional JSON manifest for generated gallery fixtures so lessons can assert expected dominant colors without re-parsing Markdown.
+- Optional gallery fixture tags for lesson themes such as warm, cool, contrast, and accessibility examples.
 - Optional per-color delta threshold in compare reports so small percentage changes can be hidden during review.
 
 ## Contributing

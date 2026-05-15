@@ -157,6 +157,18 @@ def test_cli_gallery_respects_no_index(tmp_path: Path, capsys) -> None:
     assert "3 files" in capsys.readouterr().out
 
 
+def test_cli_gallery_writes_manifest_with_no_index(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(["gallery", str(gallery_dir), "--manifest", "--no-index"])
+
+    assert exit_code == 0
+    assert (gallery_dir / "warm-blocks.png").exists()
+    assert (gallery_dir / "manifest.json").exists()
+    assert not (gallery_dir / "README.md").exists()
+    assert "4 files" in capsys.readouterr().out
+
+
 def test_cli_gallery_rejects_existing_files_without_force(
     tmp_path: Path, capsys
 ) -> None:
@@ -168,6 +180,19 @@ def test_cli_gallery_rejects_existing_files_without_force(
 
     assert exit_code == 2
     assert "already exists" in capsys.readouterr().err
+
+
+def test_cli_gallery_rejects_existing_manifest_without_force(
+    tmp_path: Path, capsys
+) -> None:
+    gallery_dir = tmp_path / "gallery"
+    gallery_dir.mkdir()
+    (gallery_dir / "manifest.json").write_text("existing", encoding="utf-8")
+
+    exit_code = main(["gallery", str(gallery_dir), "--manifest"])
+
+    assert exit_code == 2
+    assert "manifest.json" in capsys.readouterr().err
 
 
 def test_cli_gallery_force_overwrites_existing_files(tmp_path: Path, capsys) -> None:

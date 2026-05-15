@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -65,12 +66,18 @@ SAMPLE_FIXTURES: tuple[SampleFixture, ...] = (
 
 
 def create_gallery(
-    output_dir: str | Path, *, include_index: bool = True, force: bool = False
+    output_dir: str | Path,
+    *,
+    include_index: bool = True,
+    include_manifest: bool = False,
+    force: bool = False,
 ) -> list[Path]:
     target_dir = Path(output_dir)
     paths = [target_dir / sample.filename for sample in SAMPLE_FIXTURES]
     if include_index:
         paths.append(target_dir / "README.md")
+    if include_manifest:
+        paths.append(target_dir / "manifest.json")
 
     existing = [path for path in paths if path.exists()]
     if existing and not force:
@@ -89,7 +96,32 @@ def create_gallery(
             render_gallery_index(target_dir),
             encoding="utf-8",
         )
+    if include_manifest:
+        (target_dir / "manifest.json").write_text(
+            render_gallery_manifest(),
+            encoding="utf-8",
+        )
     return paths
+
+
+def render_gallery_manifest() -> str:
+    manifest = {
+        "schema_version": 1,
+        "generator": "swatch-story",
+        "samples": [
+            {
+                "name": sample.name,
+                "filename": sample.filename,
+                "story": sample.story,
+                "width": sample.size[0],
+                "height": sample.size[1],
+                "expected_dominant_hex": sample.expected_dominant_hex,
+                "expected_palette_hexes": list(sample.expected_palette_hexes),
+            }
+            for sample in SAMPLE_FIXTURES
+        ],
+    }
+    return json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
 
 
 def render_gallery_index(output_dir: str | Path) -> str:
