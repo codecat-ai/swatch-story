@@ -205,6 +205,24 @@ def render_compare_html_report(
       border-radius: 50%;
       flex: 0 0 auto;
     }}
+    .palette-preview {{
+      display: flex;
+      min-height: 38px;
+      overflow: hidden;
+      border: 1px solid #dddddd;
+      border-radius: 6px;
+      margin: 0 0 16px;
+      background: #f7f7f5;
+    }}
+    .preview-swatch {{
+      flex: 1 1 0;
+      min-width: 28px;
+      border: 0;
+      border-right: 1px solid rgba(0, 0, 0, 0.16);
+    }}
+    .preview-swatch:last-child {{
+      border-right: 0;
+    }}
     .none {{
       color: #666666;
     }}
@@ -464,6 +482,7 @@ def _render_compare_side(label: str, side: dict[str, Any]) -> str:
     )
     return f"""      <article class="panel">
         <h2>{escape(label)}</h2>
+        {_render_palette_preview(label, side["palette"])}
         <dl>
           <dt>Source name</dt>
           <dd>{escape(str(side["source"]))}</dd>
@@ -475,6 +494,32 @@ def _render_compare_side(label: str, side: dict[str, Any]) -> str:
           <dd>{_render_color_list([entry["hex"] for entry in side["palette"]])}</dd>
         </dl>
       </article>"""
+
+
+def _render_palette_preview(label: str, palette: list[dict[str, Any]]) -> str:
+    preview_label = f"{escape(label)} palette preview"
+    if not palette:
+        return (
+            f'<div class="palette-preview" aria-label="{preview_label}">'
+            '<span class="none">None</span></div>'
+        )
+    swatches = "\n".join(
+        f'          <span class="preview-swatch" '
+        f'style="background: {_safe_css_hex_color(str(entry["hex"]))}" '
+        f'aria-label="{escape(_preview_swatch_label(entry))}" '
+        f'title="{escape(_preview_swatch_label(entry))}"></span>'
+        for entry in palette
+    )
+    return f"""        <div class="palette-preview" aria-label="{preview_label}">
+{swatches}
+        </div>"""
+
+
+def _preview_swatch_label(entry: dict[str, Any]) -> str:
+    hint = entry.get("name", entry.get("label"))
+    if hint:
+        return f"{entry['hex']} {hint}"
+    return str(entry["hex"])
 
 
 def _render_color_group(label: str, values: list[str]) -> str:
@@ -489,9 +534,21 @@ def _render_color_list(values: list[str]) -> str:
         return '<p class="none">None</p>'
     items = "\n".join(
         f'          <li class="chip"><span class="swatch" '
-        f'style="background: {escape(value)}"></span>{escape(value)}</li>'
+        f'style="background: {_safe_css_hex_color(value)}"></span>{escape(value)}</li>'
         for value in values
     )
     return f"""<ul class="chips">
 {items}
         </ul>"""
+
+
+def _safe_css_hex_color(value: str) -> str:
+    return value if _is_hex_color(value) else "transparent"
+
+
+def _is_hex_color(value: str) -> bool:
+    return (
+        len(value) == 7
+        and value[0] == "#"
+        and all(character in "0123456789abcdefABCDEF" for character in value[1:])
+    )
