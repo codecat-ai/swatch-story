@@ -21,25 +21,39 @@ COMPARE_CSV_HEADER = [
 
 
 def compare_summaries(
-    before_summary: dict[str, Any], after_summary: dict[str, Any]
+    before_summary: dict[str, Any],
+    after_summary: dict[str, Any],
+    *,
+    min_delta_percent: float = 0.0,
 ) -> dict[str, Any]:
+    if min_delta_percent < 0:
+        raise ValueError("min_delta_percent must be 0 or greater")
     before_hexes = [entry["hex"] for entry in before_summary["palette"]]
     after_hexes = [entry["hex"] for entry in after_summary["palette"]]
     before_set = set(before_hexes)
     after_set = set(after_hexes)
     shared_set = before_set & after_set
     union = before_set | after_set
+    before_palette = {entry["hex"]: entry for entry in before_summary["palette"]}
+    after_palette = {entry["hex"]: entry for entry in after_summary["palette"]}
+    shared = [hex_color for hex_color in before_hexes if hex_color in shared_set]
 
     return {
         "before": _comparison_side(before_summary),
         "after": _comparison_side(after_summary),
-        "shared": [hex_color for hex_color in before_hexes if hex_color in shared_set],
+        "shared": shared,
         "added": [
             hex_color for hex_color in after_hexes if hex_color not in before_set
         ],
         "removed": [
             hex_color for hex_color in before_hexes if hex_color not in after_set
         ],
+        "changed": _changed_color_deltas(
+            shared,
+            before_palette,
+            after_palette,
+            min_delta_percent=min_delta_percent,
+        ),
         "drift_score": round((1 - (len(shared_set) / len(union))) * 100, 2)
         if union
         else 0.0,
@@ -58,6 +72,30 @@ def _comparison_side(summary: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _changed_color_deltas(
+    shared: list[str],
+    before_palette: dict[str, dict[str, Any]],
+    after_palette: dict[str, dict[str, Any]],
+    *,
+    min_delta_percent: float,
+) -> list[dict[str, Any]]:
+    changed = []
+    for hex_color in shared:
+        before_percent = before_palette[hex_color]["percent"]
+        after_percent = after_palette[hex_color]["percent"]
+        delta_percent = after_percent - before_percent
+        if abs(delta_percent) >= min_delta_percent:
+            changed.append(
+                {
+                    "hex": hex_color,
+                    "before_percent": before_percent,
+                    "after_percent": after_percent,
+                    "delta_percent": delta_percent,
+                }
+            )
+    return changed
+
+
 def render_compare_text(report: dict[str, Any]) -> str:
     before = report["before"]
     after = report["after"]
@@ -68,6 +106,7 @@ def render_compare_text(report: dict[str, Any]) -> str:
         f"Shared colors: {_format_color_list(report['shared'])}",
         f"Added colors: {_format_color_list(report['added'])}",
         f"Removed colors: {_format_color_list(report['removed'])}",
+        f"Changed colors: {_format_changed_color_list(report['changed'])}",
         f"Drift score: {report['drift_score']}%",
     ]
     return "\n".join(lines) + "\n"
@@ -94,6 +133,7 @@ def render_compare_text_report(
         ("Shared colors", _format_text_color_list(report["shared"])),
         ("Added colors", _format_text_color_list(report["added"])),
         ("Removed colors", _format_text_color_list(report["removed"])),
+        ("Changed colors", _format_text_changed_color_list(report["changed"])),
         ("Drift score", f"{report['drift_score']}%"),
     ]
     lines = [_single_line(title), ""]
@@ -256,6 +296,7 @@ def render_compare_html_report(
       {_render_color_group("Shared colors", report["shared"])}
       {_render_color_group("Added colors", report["added"])}
       {_render_color_group("Removed colors", report["removed"])}
+      {_render_changed_color_group("Changed colors", report["changed"])}
     </section>
   </main>
 </body>
@@ -290,6 +331,10 @@ def render_compare_markdown_report(
         ("Shared colors", _format_markdown_color_list(report["shared"])),
         ("Added colors", _format_markdown_color_list(report["added"])),
         ("Removed colors", _format_markdown_color_list(report["removed"])),
+        (
+            "Changed colors",
+            _format_markdown_changed_color_list(report["changed"]),
+        ),
         ("Drift score", f"{report['drift_score']}%"),
     ]
     lines = [
@@ -369,24 +414,32 @@ def render_compare_csv_report(report: dict[str, Any]) -> str:
                 "",
                 "",
             ],
+            [
+                "metadata",
+                "changed_count",
+                len(report["changed"]),
+                "",
+                "",
+                "",
+                "",
+                "",
+            ],
         ]
     )
 
     before_palette = _palette_by_hex(before)
     after_palette = _palette_by_hex(after)
-    for hex_color in report["shared"]:
-        before_percent = before_palette[hex_color]["percent"]
-        after_percent = after_palette[hex_color]["percent"]
+    for changed in report["changed"]:
         writer.writerow(
             [
                 "color",
                 "",
                 "",
-                "shared",
-                hex_color,
-                before_percent,
-                after_percent,
-                after_percent - before_percent,
+                "changed",
+                changed["hex"],
+                changed["before_percent"],
+                changed["after_percent"],
+                changed["delta_percent"],
             ]
         )
     for hex_color in report["added"]:
@@ -440,8 +493,20 @@ def _format_color_list(values: list[str]) -> str:
     return ", ".join(values) if values else "none"
 
 
+def _format_changed_color_list(values: list[dict[str, Any]]) -> str:
+    if not values:
+        return "none"
+    return ", ".join(_format_changed_color(value) for value in values)
+
+
 def _format_text_color_list(values: list[str]) -> str:
     return ", ".join(values) if values else "None"
+
+
+def _format_text_changed_color_list(values: list[dict[str, Any]]) -> str:
+    if not values:
+        return "None"
+    return ", ".join(_format_changed_color(value) for value in values)
 
 
 def _format_html_optional_color(value: str | None) -> str:
@@ -452,6 +517,23 @@ def _format_markdown_color_list(values: list[str]) -> str:
     if not values:
         return "None"
     return ", ".join(f"`{markdown_escape(value)}`" for value in values)
+
+
+def _format_markdown_changed_color_list(values: list[dict[str, Any]]) -> str:
+    if not values:
+        return "None"
+    return ", ".join(
+        f"`{markdown_escape(_format_changed_color(value))}`" for value in values
+    )
+
+
+def _format_changed_color(value: dict[str, Any]) -> str:
+    delta = value["delta_percent"]
+    delta_text = f"+{delta}" if delta > 0 else str(delta)
+    return (
+        f"{value['hex']} ({value['before_percent']}% to "
+        f"{value['after_percent']}%, {delta_text}%)"
+    )
 
 
 def _format_markdown_value(value: str) -> str:
@@ -529,12 +611,33 @@ def _render_color_group(label: str, values: list[str]) -> str:
       </article>"""
 
 
+def _render_changed_color_group(label: str, values: list[dict[str, Any]]) -> str:
+    return f"""      <article class="panel">
+        <h2>{escape(label)}</h2>
+        {_render_changed_color_list(values)}
+      </article>"""
+
+
 def _render_color_list(values: list[str]) -> str:
     if not values:
         return '<p class="none">None</p>'
     items = "\n".join(
         f'          <li class="chip"><span class="swatch" '
         f'style="background: {_safe_css_hex_color(value)}"></span>{escape(value)}</li>'
+        for value in values
+    )
+    return f"""<ul class="chips">
+{items}
+        </ul>"""
+
+
+def _render_changed_color_list(values: list[dict[str, Any]]) -> str:
+    if not values:
+        return '<p class="none">None</p>'
+    items = "\n".join(
+        f'          <li class="chip"><span class="swatch" '
+        f'style="background: {_safe_css_hex_color(str(value["hex"]))}"></span>'
+        f"{escape(_format_changed_color(value))}</li>"
         for value in values
     )
     return f"""<ul class="chips">

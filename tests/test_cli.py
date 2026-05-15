@@ -399,6 +399,10 @@ def test_cli_compare_writes_csv_and_still_prints_report(tmp_path: Path, capsys) 
     assert "Shared colors: #0000ff, #00ff00" in console
     assert "Added colors: #ffff00" in console
     assert "Removed colors: #ff0000" in console
+    assert (
+        "Changed colors: #0000ff (33.33% to 33.33%, 0.0%), "
+        "#00ff00 (33.33% to 33.33%, 0.0%)"
+    ) in console
     assert "Drift score: 50.0%" in console
     assert csv_path.read_text(encoding="utf-8") == (
         "section,field,value,category,hex,before_percent,after_percent,"
@@ -411,11 +415,82 @@ def test_cli_compare_writes_csv_and_still_prints_report(tmp_path: Path, capsys) 
         "metadata,shared_count,2,,,,,\n"
         "metadata,added_count,1,,,,,\n"
         "metadata,removed_count,1,,,,,\n"
-        "color,,,shared,#0000ff,33.33,33.33,0.0\n"
-        "color,,,shared,#00ff00,33.33,33.33,0.0\n"
+        "metadata,changed_count,2,,,,,\n"
+        "color,,,changed,#0000ff,33.33,33.33,0.0\n"
+        "color,,,changed,#00ff00,33.33,33.33,0.0\n"
         "color,,,added,#ffff00,,33.33,\n"
         "color,,,removed,#ff0000,33.33,,\n"
     )
+
+
+def test_cli_compare_min_delta_percent_filters_changed_csv_rows(
+    tmp_path: Path, capsys
+) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (10, 1))
+    before.putdata([(255, 0, 0)] * 5 + [(0, 0, 255)] * 3 + [(0, 255, 0)] * 2)
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (10, 1))
+    after.putdata([(255, 255, 0)] * 4 + [(0, 0, 255)] * 4 + [(0, 255, 0)] * 2)
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+    csv_path = tmp_path / "nested" / "compare.csv"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--min-delta-percent",
+            "15",
+            "--json",
+            str(json_path),
+            "--csv",
+            str(csv_path),
+        ]
+    )
+
+    assert exit_code == 0
+    console = capsys.readouterr().out
+    assert "Changed colors: none" in console
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["shared"] == ["#0000ff", "#00ff00"]
+    assert report["added"] == ["#ffff00"]
+    assert report["removed"] == ["#ff0000"]
+    assert report["changed"] == []
+    csv = csv_path.read_text(encoding="utf-8")
+    assert "color,,,shared,#0000ff,30.0,40.0,10.0\n" not in csv
+    assert "color,,,shared,#00ff00,20.0,20.0,0.0\n" not in csv
+    assert "color,,,added,#ffff00,,40.0,\n" in csv
+    assert "color,,,removed,#ff0000,50.0,,\n" in csv
+
+
+def test_cli_compare_rejects_negative_min_delta_percent_with_argparse(
+    tmp_path: Path, capsys
+) -> None:
+    before_path = tmp_path / "before.png"
+    after_path = tmp_path / "after.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(before_path)
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(after_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(
+            [
+                "compare",
+                str(before_path),
+                str(after_path),
+                "--min-delta-percent",
+                "-0.1",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert "--min-delta-percent must be 0 or greater" in capsys.readouterr().err
 
 
 def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> None:

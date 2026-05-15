@@ -9,6 +9,10 @@ from swatch_story.compare import (
 
 
 def summary(source: str, colors: list[str]) -> dict:
+    return summary_with_percents(source, [(color, 50.0) for color in colors])
+
+
+def summary_with_percents(source: str, colors: list[tuple[str, float]]) -> dict:
     return {
         "source": source,
         "source_path": f"fixtures/{source}",
@@ -18,12 +22,12 @@ def summary(source: str, colors: list[str]) -> dict:
                 "hex": color,
                 "rgb": [rank, rank, rank],
                 "count": 1,
-                "percent": 50.0,
+                "percent": percent,
                 "luminance": 0.1,
                 "best_text_color": "white",
                 "label": "dark",
             }
-            for rank, color in enumerate(colors, start=1)
+            for rank, (color, percent) in enumerate(colors, start=1)
         ],
     }
 
@@ -54,6 +58,59 @@ def test_compare_summaries_uses_palette_order_for_added_and_removed() -> None:
     assert report["added"] == ["#bbbbbb", "#cccccc"]
     assert report["removed"] == ["#aaaaaa"]
     assert report["drift_score"] == 60.0
+
+
+def test_compare_summaries_reports_deterministic_changed_color_deltas() -> None:
+    before = summary_with_percents(
+        "before.png",
+        [("#111111", 70.0), ("#222222", 20.0), ("#333333", 10.0)],
+    )
+    after = summary_with_percents(
+        "after.png",
+        [("#222222", 25.5), ("#333333", 4.5), ("#444444", 70.0)],
+    )
+
+    report = compare_summaries(before, after)
+
+    assert report["changed"] == [
+        {
+            "hex": "#222222",
+            "before_percent": 20.0,
+            "after_percent": 25.5,
+            "delta_percent": 5.5,
+        },
+        {
+            "hex": "#333333",
+            "before_percent": 10.0,
+            "after_percent": 4.5,
+            "delta_percent": -5.5,
+        },
+    ]
+
+
+def test_compare_summaries_filters_changed_colors_by_min_delta_percent() -> None:
+    before = summary_with_percents(
+        "before.png",
+        [("#111111", 70.0), ("#222222", 20.0), ("#333333", 10.0)],
+    )
+    after = summary_with_percents(
+        "after.png",
+        [("#222222", 24.9), ("#333333", 4.0), ("#444444", 71.1)],
+    )
+
+    report = compare_summaries(before, after, min_delta_percent=5.0)
+
+    assert report["shared"] == ["#222222", "#333333"]
+    assert report["added"] == ["#444444"]
+    assert report["removed"] == ["#111111"]
+    assert report["changed"] == [
+        {
+            "hex": "#333333",
+            "before_percent": 10.0,
+            "after_percent": 4.0,
+            "delta_percent": -6.0,
+        }
+    ]
 
 
 def test_render_compare_text_is_concise_and_human_readable() -> None:
@@ -171,6 +228,7 @@ def test_render_compare_markdown_report_contains_palette_drift() -> None:
         "| Shared colors | `#222222` |\n"
         "| Added colors | `#333333` |\n"
         "| Removed colors | `#111111` |\n"
+        "| Changed colors | `#222222 (50.0% to 50.0%, 0.0%)` |\n"
         "| Drift score | 66.67% |\n"
         "\n"
     )
@@ -210,7 +268,8 @@ def test_render_compare_csv_report_contains_metadata_and_drift_rows() -> None:
         "metadata,shared_count,1,,,,,\r\n"
         "metadata,added_count,1,,,,,\r\n"
         "metadata,removed_count,1,,,,,\r\n"
-        "color,,,shared,#222222,50.0,50.0,0.0\r\n"
+        "metadata,changed_count,1,,,,,\r\n"
+        "color,,,changed,#222222,50.0,50.0,0.0\r\n"
         "color,,,added,#333333,,50.0,\r\n"
         "color,,,removed,#111111,50.0,,\r\n"
     )
@@ -236,6 +295,7 @@ def test_render_compare_text_report_contains_deterministic_drift_fields() -> Non
         "Shared colors: #222222\n"
         "Added colors: #333333\n"
         "Removed colors: #111111\n"
+        "Changed colors: #222222 (50.0% to 50.0%, 0.0%)\n"
         "Drift score: 66.67%\n"
     )
 
