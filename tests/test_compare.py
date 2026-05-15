@@ -102,6 +102,40 @@ def test_render_compare_html_report_contains_palette_drift_and_escapes_text() ->
     assert "66.67%</dd>" in html
 
 
+def test_render_compare_html_report_includes_accessible_palette_previews() -> None:
+    before = summary("before.png", ["#111111", "#222222"])
+    after = summary("after.png", ["#333333", "#444444"])
+    before["palette"][0]["name"] = "ink"
+    after["palette"][1]["label"] = "bright accent"
+    report = compare_summaries(before, after)
+
+    html = render_compare_html_report(report)
+
+    assert 'class="palette-preview" aria-label="Before palette preview"' in html
+    assert 'class="palette-preview" aria-label="After palette preview"' in html
+    assert html.count('class="preview-swatch"') == 4
+    assert 'style="background: #111111"' in html
+    assert 'aria-label="#111111 ink"' in html
+    assert 'style="background: #444444"' in html
+    assert 'aria-label="#444444 bright accent"' in html
+
+
+def test_render_compare_html_report_escapes_preview_hex_and_names() -> None:
+    before = summary("before.png", ['#123456"; color: red'])
+    after = summary("after.png", ["#abcdef"])
+    before["palette"][0]["name"] = '<script>alert("x")</script>'
+    after["palette"][0]["label"] = "cool & calm"
+    report = compare_summaries(before, after)
+
+    html = render_compare_html_report(report)
+
+    assert "#123456&quot;; color: red" in html
+    assert "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;" in html
+    assert '<script>alert("x")</script>' not in html
+    assert "cool &amp; calm" in html
+    assert 'style="background: #123456"; color: red"' not in html
+
+
 def test_render_compare_html_report_renders_empty_drift_lists_as_none() -> None:
     report = compare_summaries(
         summary("before.png", ["#111111", "#222222"]),
