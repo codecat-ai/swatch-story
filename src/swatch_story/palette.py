@@ -158,6 +158,10 @@ def lightness_label(luminance: float) -> str:
     return "mid"
 
 
+def token_label(prefix: str, rank: int) -> str:
+    return f"{prefix}-{rank}"
+
+
 def common_color_name(rgb: tuple[int, int, int]) -> str:
     return min(
         COMMON_COLOR_NAMES,
@@ -357,7 +361,7 @@ def build_palette(
                 contrast_with_black=contrast_with_black,
                 contrast_with_white=contrast_with_white,
                 best_text_color=best_text_color(rgb),
-                label=lightness_label(luminance),
+                label=token_label("color", rank),
             )
         )
     return entries
@@ -372,7 +376,8 @@ def sort_palette(entries: list[PaletteEntry], sort: str) -> list[PaletteEntry]:
     else:
         sorted_entries = sorted(entries, key=hue_sort_key)
     return [
-        replace(entry, rank=rank) for rank, entry in enumerate(sorted_entries, start=1)
+        replace(entry, rank=rank, label=token_label("color", rank))
+        for rank, entry in enumerate(sorted_entries, start=1)
     ]
 
 
