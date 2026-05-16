@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import swatch_story.report as report
 from swatch_story.report import (
     render_ase_report,
     render_csv_report,
@@ -178,6 +179,75 @@ def test_write_json_report_applies_requested_precision(tmp_path: Path) -> None:
     assert data["palette"][1]["luminance"] == 0.85
     assert data["palette"][1]["contrast_with_black"] == 18.1
     assert data["palette"][1]["contrast_with_white"] == 1.16
+
+
+def test_write_tokens_report_creates_design_token_json(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "tokens.json"
+
+    report.write_tokens_report(sample_summary(), output, title="Product Palette")
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data == {
+        "$schema": "https://design-tokens.github.io/community-group/format/",
+        "source": "sample.png",
+        "title": "Product Palette",
+        "color": {
+            "color-1": {
+                "$type": "color",
+                "$value": "#112233",
+                "description": (
+                    "Rank 1 color covering 50.0% of sampled pixels. "
+                    "Use white text for readable contrast."
+                ),
+                "extensions": {
+                    "swatchStory": {
+                        "rank": 1,
+                        "rgb": [17, 34, 51],
+                        "percent": 50.0,
+                        "luminance": 0.015,
+                        "contrastWithBlack": 1.3,
+                        "contrastWithWhite": 16.15,
+                        "bestTextColor": "white",
+                    }
+                },
+            },
+            "color-2": {
+                "$type": "color",
+                "$value": "#eeeeee",
+                "description": (
+                    "Rank 2 color covering 50.0% of sampled pixels. "
+                    "Use black text for readable contrast."
+                ),
+                "extensions": {
+                    "swatchStory": {
+                        "rank": 2,
+                        "rgb": [238, 238, 238],
+                        "percent": 50.0,
+                        "luminance": 0.855,
+                        "contrastWithBlack": 18.1,
+                        "contrastWithWhite": 1.16,
+                        "bestTextColor": "black",
+                    }
+                },
+            },
+        },
+    }
+
+
+def test_write_tokens_report_applies_requested_precision(tmp_path: Path) -> None:
+    output = tmp_path / "tokens.json"
+
+    report.write_tokens_report(sample_summary(), output, precision=1)
+
+    tokens = json.loads(output.read_text(encoding="utf-8"))["color"]
+    first = tokens["color-1"]
+    assert first["description"] == (
+        "Rank 1 color covering 50.0% of sampled pixels. "
+        "Use white text for readable contrast."
+    )
+    assert first["extensions"]["swatchStory"]["luminance"] == 0.0
+    assert first["extensions"]["swatchStory"]["contrastWithWhite"] == 16.1
+    assert tokens["color-2"]["extensions"]["swatchStory"]["luminance"] == 0.9
 
 
 def test_csv_report_renders_stable_table_with_blank_missing_names() -> None:

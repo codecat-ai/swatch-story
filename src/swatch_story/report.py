@@ -22,6 +22,69 @@ def write_json_report(
     )
 
 
+def write_tokens_report(
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            render_tokens_report(summary, title=title, precision=precision),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def render_tokens_report(
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> dict[str, Any]:
+    report_summary = _summary_with_precision(summary, precision)
+    return {
+        "$schema": "https://design-tokens.github.io/community-group/format/",
+        "source": report_summary["source"],
+        "title": title,
+        "color": {
+            entry["label"]: _design_token_entry(entry, precision=precision)
+            for entry in report_summary["palette"]
+        },
+    }
+
+
+def _design_token_entry(
+    entry: dict[str, Any], *, precision: int | None = None
+) -> dict[str, Any]:
+    return {
+        "$type": "color",
+        "$value": entry["hex"],
+        "description": (
+            f"Rank {entry['rank']} color covering "
+            f"{_format_decimal(entry['percent'], precision)}% of sampled pixels. "
+            f"Use {entry['best_text_color']} text for readable contrast."
+        ),
+        "extensions": {
+            "swatchStory": {
+                "rank": entry["rank"],
+                "rgb": entry["rgb"],
+                "percent": entry["percent"],
+                "luminance": entry["luminance"],
+                "contrastWithBlack": entry["contrast_with_black"],
+                "contrastWithWhite": entry["contrast_with_white"],
+                "bestTextColor": entry["best_text_color"],
+            }
+        },
+    }
+
+
 CSV_HEADER = [
     "rank",
     "hex",

@@ -89,6 +89,53 @@ def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
     assert "contrast:black 5.3:1 white 4.0:1" in console
 
 
+def test_cli_writes_design_tokens_with_precision_and_label_prefix(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (3, 1))
+    image.putdata([(255, 0, 0), (255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    tokens_path = tmp_path / "nested" / "tokens.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--precision",
+            "1",
+            "--label-prefix",
+            "brand",
+            "--tokens",
+            str(tokens_path),
+            "--title",
+            "CLI Tokens",
+        ]
+    )
+
+    assert exit_code == 0
+    tokens = json.loads(tokens_path.read_text(encoding="utf-8"))
+    assert tokens["source"] == "cli.png"
+    assert tokens["title"] == "CLI Tokens"
+    assert list(tokens["color"]) == ["brand-1", "brand-2"]
+    first = tokens["color"]["brand-1"]
+    assert first["$type"] == "color"
+    assert first["$value"] == "#ff0000"
+    assert first["description"] == (
+        "Rank 1 color covering 66.7% of sampled pixels. "
+        "Use black text for readable contrast."
+    )
+    assert first["extensions"]["swatchStory"]["percent"] == 66.7
+    assert first["extensions"]["swatchStory"]["luminance"] == 0.2
+    assert first["extensions"]["swatchStory"]["contrastWithBlack"] == 5.3
+    assert first["extensions"]["swatchStory"]["contrastWithWhite"] == 4.0
+    assert first["extensions"]["swatchStory"]["bestTextColor"] == "black"
+    assert "brand-1" in capsys.readouterr().out
+
+
 def test_cli_uses_default_design_token_labels(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))
@@ -208,6 +255,27 @@ def test_cli_compare_does_not_accept_label_prefix(tmp_path: Path, capsys) -> Non
 
     assert exc_info.value.code == 2
     assert "unrecognized arguments: --label-prefix brand" in capsys.readouterr().err
+
+
+def test_cli_compare_does_not_accept_tokens(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    after_path = tmp_path / "after.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(before_path)
+    Image.new("RGB", (1, 1), (0, 0, 255)).save(after_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(
+            [
+                "compare",
+                str(before_path),
+                str(after_path),
+                "--tokens",
+                str(tmp_path / "tokens.json"),
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert "unrecognized arguments: --tokens" in capsys.readouterr().err
 
 
 def _ase_strings(data: bytes) -> list[str]:

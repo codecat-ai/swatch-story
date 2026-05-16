@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, UTF-8 CSV, CSS custom properties, portable Markdown, paste-friendly plain text, standalone SVG swatch sheets, GIMP `.gpl` palettes, Adobe Swatch Exchange `.ase` palettes, and a standalone HTML report.
+`swatch-story` is a local-first image utility that extracts a compact color story from an image and exports machine-readable JSON, design-token JSON, UTF-8 CSV, CSS custom properties, portable Markdown, paste-friendly plain text, standalone SVG swatch sheets, GIMP `.gpl` palettes, Adobe Swatch Exchange `.ase` palettes, and a standalone HTML report.
 
 ## Problem and Motivation
 
@@ -13,6 +13,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 
 - Deterministic palette extraction from local image files with Pillow.
 - JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, black and white text contrast ratios, readable text choice, and a stable token label.
+- Design-token JSON output for the main image command, with Design Tokens Community Group schema metadata, stable color token keys, `$type: color`, `$value`, human-readable contrast guidance, and `extensions.swatchStory` metrics for token pipelines.
 - UTF-8 CSV output with stable columns for spreadsheet sorting, filtering, and lightweight data workflows.
 - CSS custom property output with hex, RGB triplets, black/white contrast ratios, and readable text-color variables.
 - Portable Markdown reports with palette metadata and a table for notes and docs.
@@ -26,8 +27,8 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
 - `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
-- `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
-- `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command.
+- `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, design-token JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
+- `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command, including `--tokens` keys.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
@@ -45,10 +46,10 @@ python -m pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --tokens story.tokens.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-The command prints a terminal summary and, when requested, writes `story.json`, `story.csv`, `story.css`, `story.html`, `story.md`, `story.txt`, `story.svg`, `story.gpl`, and `story.ase`.
+The command prints a terminal summary and, when requested, writes `story.json`, `story.tokens.json`, `story.csv`, `story.css`, `story.html`, `story.md`, `story.txt`, `story.svg`, `story.gpl`, and `story.ase`.
 
 Generate local teaching fixtures from the same source checkout:
 
@@ -82,6 +83,12 @@ Create only a JSON report:
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+Create design-token JSON for a token pipeline:
+
+```bash
+swatch-story poster.png --colors 5 --tokens poster.tokens.json --title "Poster Palette"
 ```
 
 Create a spreadsheet-friendly CSV report:
@@ -129,13 +136,13 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 Round report percentages, relative luminance values, and contrast ratios for compact review output:
 
 ```bash
-swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --tokens poster.tokens.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
 Apply a design-token label prefix to generated reports:
 
 ```bash
-swatch-story poster.png --colors 5 --label-prefix brand --json poster-colors.json --css poster-colors.css
+swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.json --json poster-colors.json --css poster-colors.css
 ```
 
 Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text drift reports:
@@ -151,6 +158,8 @@ The compare CSV report is a deterministic UTF-8 table for spreadsheet palette dr
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance.
 
 The SVG report is a standalone local swatch sheet for docs and slides. It shows the title, source filename, image dimensions, extraction settings, and one row per swatch with a color rectangle, HEX, optional approximate name, percent, luminance, black/white contrast ratios, label, and readable text color. User-derived title, source, labels, and names are XML-escaped, and the source image itself is not embedded.
+
+The design-token JSON report is intended for design-token pipelines. It uses the extracted label as each `color` key, so `--label-prefix brand` produces keys such as `brand-1`; `--precision N` also rounds token percentages, luminance values, contrast ratios, and description text. The option is available on the main image command only, not `compare` or `gallery`.
 
 Create CSS custom properties for use in a stylesheet:
 
@@ -329,6 +338,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 - `--colors N`: number of colors to report, from 2 to 12. Default: 6.
 - `--json PATH`: write a JSON report.
+- `--tokens PATH`: write a deterministic design-token JSON report for import into token pipelines. The report includes `$schema`, `source`, `title`, and `color` tokens keyed by palette label with `$type`, `$value`, description text, and `extensions.swatchStory` metrics.
 - `--csv PATH`: write a UTF-8 CSV report with stable columns: `rank`, `hex`, `r`, `g`, `b`, `count`, `percent`, `luminance`, `contrast_with_black`, `contrast_with_white`, `best_text_color`, `label`, and `name`.
 - `--css PATH`: write CSS custom properties.
 - `--html PATH`: write a standalone HTML report.
@@ -342,9 +352,9 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
 - `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
-- `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
-- `--label-prefix PREFIX`: replace default palette labels with `PREFIX-1`, `PREFIX-2`, and so on for the main image command. `PREFIX` must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. For example, `--label-prefix brand` writes labels such as `brand-1` into JSON, CSV, CSS custom property names, Markdown, text, HTML, SVG, GIMP `.gpl`, Adobe `.ase`, and terminal output. Compare and gallery commands do not use this option.
-- `--title TEXT`: title for HTML, Markdown, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
+- `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, design-token JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
+- `--label-prefix PREFIX`: replace default palette labels with `PREFIX-1`, `PREFIX-2`, and so on for the main image command. `PREFIX` must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. For example, `--label-prefix brand` writes labels such as `brand-1` into JSON, design-token JSON keys, CSV, CSS custom property names, Markdown, text, HTML, SVG, GIMP `.gpl`, Adobe `.ase`, and terminal output. Compare and gallery commands do not use this option.
+- `--title TEXT`: title for design-token JSON, HTML, Markdown, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
@@ -365,7 +375,7 @@ python -m build
 
 ## Testing
 
-The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, report rendering, gallery manifest content, and CLI file output.
+The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, report rendering, design-token JSON output, gallery manifest content, and CLI file output.
 
 ```bash
 pytest -q

@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、UTF-8 CSV、CSS 自定义属性、便携 Markdown、便于粘贴的纯文本、独立 SVG 色块单页、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
+`swatch-story` 是一个本地优先的图像工具，可以从图片中提取简洁的色彩故事，并导出机器可读的 JSON、设计令牌 JSON、UTF-8 CSV、CSS 自定义属性、便携 Markdown、便于粘贴的纯文本、独立 SVG 色块单页、GIMP `.gpl` 调色板、Adobe Swatch Exchange `.ase` 调色板和独立 HTML 报告。
 
 ## 问题与动机
 
@@ -13,6 +13,7 @@
 
 - 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
 - JSON 输出包含源文件名、源文件路径、图像尺寸、提取设置、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、黑/白文字对比度、可读文字选择以及稳定的令牌标签。
+- 主图像命令可输出设计令牌 JSON，包含 Design Tokens Community Group schema 元数据、稳定的颜色令牌键、`$type: color`、`$value`、可读对比度说明，以及适合令牌流水线使用的 `extensions.swatchStory` 指标。
 - UTF-8 CSV 输出提供稳定列，便于在电子表格中排序、筛选，也适合轻量数据流程。
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组、黑/白对比度和可读文字颜色变量。
 - 便携 Markdown 报告包含调色板元数据和适合笔记、文档使用的表格。
@@ -26,8 +27,8 @@
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
 - `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
-- `--precision N` 可把 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
-- `--label-prefix PREFIX` 会在主图像命令中把默认的 `color-1`、`color-2` 标签替换为 `brand-1`、`brand-2` 这样的设计令牌标签。
+- `--precision N` 可把 JSON、设计令牌 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
+- `--label-prefix PREFIX` 会在主图像命令中把默认的 `color-1`、`color-2` 标签替换为 `brand-1`、`brand-2` 这样的设计令牌标签，也会影响 `--tokens` 的键名。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
 - 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、稳定的课程主题标签、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
@@ -45,10 +46,10 @@ python -m pip install -e ".[dev]"
 ## 快速开始
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --tokens story.tokens.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-该命令会打印终端摘要，并在需要时写入 `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl` 和 `story.ase`。
+该命令会打印终端摘要，并在需要时写入 `story.json`、`story.tokens.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl` 和 `story.ase`。
 
 从同一个源码检出生成本地教学素材：
 
@@ -82,6 +83,12 @@ swatch-story gallery demo-gallery --manifest --tag contrast --tag accessibility
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+为令牌流水线创建设计令牌 JSON：
+
+```bash
+swatch-story poster.png --colors 5 --tokens poster.tokens.json --title "Poster Palette"
 ```
 
 创建适合电子表格使用的 CSV 报告：
@@ -129,13 +136,13 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 为紧凑审阅输出舍入报告占比、相对亮度和对比度：
 
 ```bash
-swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --tokens poster.tokens.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
 为生成的报告应用设计令牌标签前缀：
 
 ```bash
-swatch-story poster.png --colors 5 --label-prefix brand --json poster-colors.json --css poster-colors.css
+swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.json --json poster-colors.json --css poster-colors.css
 ```
 
 对比两张本地图像，并写入 JSON、CSV、HTML、Markdown 和纯文本漂移报告：
@@ -151,6 +158,8 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta
 HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。
 
 SVG 报告是适合文档和幻灯片的独立本地色块单页。它会显示标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选近似名称、占比、亮度、黑/白对比度、标签和可读文字颜色。用户来源的标题、源文件名、标签和名称都会进行 XML 转义，并且不会嵌入源图片本身。
+
+设计令牌 JSON 报告面向设计令牌流水线。它使用提取出的标签作为每个 `color` 键，因此 `--label-prefix brand` 会生成 `brand-1` 等键；`--precision N` 也会舍入令牌中的占比、亮度、对比度和说明文本。该选项只适用于主图像命令，不适用于 `compare` 或 `gallery`。
 
 创建可在样式表中使用的 CSS 自定义属性：
 
@@ -331,6 +340,7 @@ Drift score: 66.67%
 
 - `--colors N`：报告的颜色数量，范围为 2 到 12。默认值：6。
 - `--json PATH`：写入 JSON 报告。
+- `--tokens PATH`：写入确定性的设计令牌 JSON 报告，便于导入令牌流水线。报告包含 `$schema`、`source`、`title`，以及按调色板标签作为键的 `color` 令牌，每个令牌包含 `$type`、`$value`、说明文本和 `extensions.swatchStory` 指标。
 - `--csv PATH`：写入 UTF-8 CSV 报告，包含稳定列：`rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`contrast_with_black`、`contrast_with_white`、`best_text_color`、`label` 和 `name`。
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
@@ -344,9 +354,9 @@ Drift score: 66.67%
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
 - `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
-- `--precision N`：把面向用户的报告占比、相对亮度和对比度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
-- `--label-prefix PREFIX`：在主图像命令中把默认调色板标签替换为 `PREFIX-1`、`PREFIX-2` 等形式。`PREFIX` 必须以小写字母开头，并且只能包含小写字母、数字和连字符。例如，`--label-prefix brand` 会把 `brand-1` 写入 JSON、CSV、CSS 自定义属性名、Markdown、纯文本、HTML、SVG、GIMP `.gpl`、Adobe `.ase` 和终端输出。compare 和 gallery 命令不使用此选项。
-- `--title TEXT`：HTML、Markdown、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
+- `--precision N`：把面向用户的报告占比、相对亮度和对比度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、设计令牌 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
+- `--label-prefix PREFIX`：在主图像命令中把默认调色板标签替换为 `PREFIX-1`、`PREFIX-2` 等形式。`PREFIX` 必须以小写字母开头，并且只能包含小写字母、数字和连字符。例如，`--label-prefix brand` 会把 `brand-1` 写入 JSON、设计令牌 JSON 键、CSV、CSS 自定义属性名、Markdown、纯文本、HTML、SVG、GIMP `.gpl`、Adobe `.ase` 和终端输出。compare 和 gallery 命令不使用此选项。
+- `--title TEXT`：设计令牌 JSON、HTML、Markdown、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
@@ -367,7 +377,7 @@ python -m build
 
 ## 测试
 
-测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染、gallery 清单内容和 CLI 文件输出。
+测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染、设计令牌 JSON 输出、gallery 清单内容和 CLI 文件输出。
 
 ```bash
 pytest -q
