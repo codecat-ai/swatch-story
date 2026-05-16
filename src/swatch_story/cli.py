@@ -175,6 +175,13 @@ def build_gallery_parser() -> argparse.ArgumentParser:
         help="Write manifest.json with expected sample metadata",
     )
     parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        metavar="TAG",
+        help="Generate only gallery samples containing TAG. May be repeated.",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing gallery files",
@@ -306,6 +313,7 @@ def gallery_main(argv: Sequence[str]) -> int:
             include_index=not args.no_index,
             include_manifest=args.manifest,
             force=args.force,
+            tags=args.tag,
         )
     except GalleryError as exc:
         print(f"swatch-story gallery: {exc}", file=sys.stderr)
