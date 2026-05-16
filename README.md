@@ -29,7 +29,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, CSV, Markdown, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
-- Source-checkout sample fixture gallery generation with tiny deterministic PNGs, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
+- Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
 ## Installation
 
@@ -55,7 +55,7 @@ Generate local teaching fixtures from the same source checkout:
 swatch-story gallery demo-gallery
 ```
 
-The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands for extracting palettes and reports from those samples. Add `--manifest` when lesson material or tests need `demo-gallery/manifest.json` with expected dominant colors and palette hex values.
+The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands and tags for extracting palettes and reports from those samples. Add `--manifest` when lesson material or tests need `demo-gallery/manifest.json` with expected dominant colors, palette hex values, and stable lesson-theme tags.
 
 ## Examples
 
@@ -69,6 +69,12 @@ Generate PNG fixtures plus a machine-readable manifest without the Markdown inde
 
 ```bash
 swatch-story gallery demo-gallery --manifest --no-index
+```
+
+Generate only samples that match every requested lesson tag:
+
+```bash
+swatch-story gallery demo-gallery --manifest --tag contrast --tag accessibility
 ```
 
 Create only a JSON report:
@@ -335,7 +341,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
-`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force]` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, expected dominant colors, and expected palette hex values. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
+`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands and readable sample tags. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, tags, expected dominant colors, and expected palette hex values. `--tag` may be repeated to generate only samples containing all requested tags; matching is case-insensitive, and unknown or empty-result filters fail before writing files. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 
 The MVP does not read a config file and does not fetch remote images.
 
@@ -359,8 +365,8 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional gallery fixture tags for lesson themes such as warm, cool, contrast, and accessibility examples.
 - Optional per-color delta threshold in compare reports so small percentage changes can be hidden during review.
+- Optional palette naming presets so teams can apply consistent labels to generated design-token exports.
 
 ## Contributing
 

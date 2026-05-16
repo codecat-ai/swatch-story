@@ -29,7 +29,7 @@
 - `--precision N` 可把 JSON、CSV、Markdown、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
-- 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
+- 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、稳定的课程主题标签、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
 
 ## 安装
 
@@ -55,7 +55,7 @@ swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.
 swatch-story gallery demo-gallery
 ```
 
-gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令。当课程材料或测试需要包含预期主色和调色板十六进制值的 `demo-gallery/manifest.json` 时，可以添加 `--manifest`。
+gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令及标签。当课程材料或测试需要包含预期主色、调色板十六进制值和稳定课程主题标签的 `demo-gallery/manifest.json` 时，可以添加 `--manifest`。
 
 ## 示例
 
@@ -69,6 +69,12 @@ swatch-story gallery demo-gallery --no-index
 
 ```bash
 swatch-story gallery demo-gallery --manifest --no-index
+```
+
+只生成匹配所有请求课程标签的示例：
+
+```bash
+swatch-story gallery demo-gallery --manifest --tag contrast --tag accessibility
 ```
 
 只创建 JSON 报告：
@@ -337,7 +343,7 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
-`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force]` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、预期主色和预期调色板十六进制值。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
+`swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令和可读示例标签的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、标签、预期主色和预期调色板十六进制值。`--tag` 可以重复使用，只生成包含所有请求标签的示例；匹配不区分大小写，未知标签或无匹配结果会在写入文件前失败。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 
 MVP 不读取配置文件，也不会获取远程图片。
 
@@ -361,8 +367,8 @@ pytest -q
 
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
-- 为 gallery 示例素材添加可选主题标签，例如 warm、cool、contrast 和 accessibility 示例。
 - 对比报告中可选的单色占比变化阈值，便于在审阅时隐藏较小的百分比变化。
+- 可选的调色板命名预设，方便团队为生成的设计令牌导出应用一致标签。
 
 ## 贡献
 

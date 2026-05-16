@@ -176,6 +176,63 @@ def test_cli_gallery_writes_manifest_with_no_index(tmp_path: Path, capsys) -> No
     assert "4 files" in capsys.readouterr().out
 
 
+def test_cli_gallery_filters_by_repeated_tags(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(
+        [
+            "gallery",
+            str(gallery_dir),
+            "--manifest",
+            "--tag",
+            "CONTRAST",
+            "--tag",
+            "accessibility",
+        ]
+    )
+
+    assert exit_code == 0
+    assert (gallery_dir / "contrast-checker.png").exists()
+    assert not (gallery_dir / "warm-blocks.png").exists()
+    manifest = json.loads((gallery_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert [sample["filename"] for sample in manifest["samples"]] == [
+        "contrast-checker.png"
+    ]
+    index_text = (gallery_dir / "README.md").read_text(encoding="utf-8")
+    assert "- Tags: `contrast`, `accessibility`, `neutral`, `primary`" in index_text
+    assert "warm-blocks.png" not in index_text
+    assert "cool-stripes.png" not in index_text
+    assert "3 files" in capsys.readouterr().out
+
+
+def test_cli_gallery_rejects_unknown_tag_before_writing(tmp_path: Path, capsys) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(["gallery", str(gallery_dir), "--tag", "missing"])
+
+    assert exit_code == 2
+    assert (
+        "swatch-story gallery: unknown gallery tag: missing" in capsys.readouterr().err
+    )
+    assert not gallery_dir.exists()
+
+
+def test_cli_gallery_rejects_empty_tag_match_before_writing(
+    tmp_path: Path, capsys
+) -> None:
+    gallery_dir = tmp_path / "gallery"
+
+    exit_code = main(
+        ["gallery", str(gallery_dir), "--tag", "warm", "--tag", "accessibility"]
+    )
+
+    assert exit_code == 2
+    assert (
+        "swatch-story gallery: no gallery samples match tag filter: warm, accessibility"
+    ) in capsys.readouterr().err
+    assert not gallery_dir.exists()
+
+
 def test_cli_gallery_rejects_existing_files_without_force(
     tmp_path: Path, capsys
 ) -> None:

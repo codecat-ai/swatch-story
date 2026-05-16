@@ -64,6 +64,37 @@ def test_create_gallery_can_write_manifest_without_index(tmp_path: Path) -> None
     assert json.loads(manifest_text) == json.loads(render_gallery_manifest())
 
 
+def test_create_gallery_filters_samples_by_repeated_tags(tmp_path: Path) -> None:
+    written = create_gallery(
+        tmp_path,
+        include_manifest=True,
+        tags=["CONTRAST", "accessibility"],
+    )
+
+    assert [path.name for path in written] == [
+        "contrast-checker.png",
+        "README.md",
+        "manifest.json",
+    ]
+    assert (tmp_path / "contrast-checker.png").exists()
+    assert not (tmp_path / "warm-blocks.png").exists()
+    assert not (tmp_path / "cool-stripes.png").exists()
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    assert [sample["filename"] for sample in manifest["samples"]] == [
+        "contrast-checker.png"
+    ]
+
+
+def test_create_gallery_rejects_no_matching_tag_filter(tmp_path: Path) -> None:
+    with pytest.raises(
+        GalleryError,
+        match="no gallery samples match tag filter: warm, accessibility",
+    ):
+        create_gallery(tmp_path, tags=["warm", "accessibility"])
+
+    assert not any(tmp_path.iterdir())
+
+
 def test_create_gallery_refuses_to_overwrite_existing_files(tmp_path: Path) -> None:
     tmp_path.mkdir(exist_ok=True)
     existing = tmp_path / SAMPLE_FIXTURES[0].filename
@@ -99,13 +130,13 @@ def test_render_gallery_index_includes_source_checkout_commands() -> None:
     markdown = render_gallery_index(Path("demo-gallery"))
 
     assert "# Swatch Story Sample Fixture Gallery" in markdown
+    assert "- Tags: `warm`, `neutral`, `primary`" in markdown
+    assert "- Tags: `contrast`, `accessibility`, `neutral`, `primary`" in markdown
     assert (
         "swatch-story demo-gallery/warm-blocks.png --colors 3 --sample-step 1"
         in markdown
     )
-    assert (
-        "swatch-story demo-gallery/cool-stripes.png --colors 3 --markdown" in markdown
-    )
+    assert "swatch-story demo-gallery/warm-blocks.png --colors 3 --markdown" in markdown
     assert "swatch-story compare demo-gallery/warm-blocks.png" in markdown
     assert "pip install" not in markdown
 
@@ -124,6 +155,7 @@ def test_render_gallery_manifest_is_stable_fixture_json() -> None:
                 "story": sample.story,
                 "width": sample.size[0],
                 "height": sample.size[1],
+                "tags": list(sample.tags),
                 "expected_dominant_hex": sample.expected_dominant_hex,
                 "expected_palette_hexes": list(sample.expected_palette_hexes),
             }
