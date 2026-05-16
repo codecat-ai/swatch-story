@@ -34,6 +34,7 @@ from swatch_story.report import (
     write_markdown_report,
     write_svg_report,
     write_text_report,
+    write_tokens_report,
 )
 
 LABEL_PREFIX_PATTERN = re.compile(r"[a-z][a-z0-9-]*\Z")
@@ -89,13 +90,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story",
         description=(
-            "Extract a local image color story as console, JSON, CSV, HTML, "
-            "CSS, Markdown, plain text, GIMP palette, and Adobe ASE output."
+            "Extract a local image color story as console, JSON, design-token "
+            "JSON, CSV, HTML, CSS, Markdown, plain text, GIMP palette, and "
+            "Adobe ASE output."
         ),
     )
     parser.add_argument("image", help="Local image path")
     add_palette_options(parser)
     parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
+    parser.add_argument(
+        "--tokens",
+        dest="tokens_path",
+        help="Write design-token JSON report to PATH",
+    )
     parser.add_argument("--csv", dest="csv_path", help="Write CSV report to PATH")
     parser.add_argument(
         "--html", dest="html_path", help="Write standalone HTML to PATH"
@@ -121,7 +128,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--title",
         default="Swatch Story",
-        help="Title for HTML, Markdown, text, GIMP palette, and ASE output",
+        help=(
+            "Title for design-token JSON, HTML, Markdown, text, GIMP palette, "
+            "and ASE output"
+        ),
     )
     parser.add_argument(
         "--precision",
@@ -288,6 +298,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.json_path:
         write_json_report(summary, args.json_path, precision=args.precision)
+    if args.tokens_path:
+        write_tokens_report(
+            summary,
+            args.tokens_path,
+            title=args.title,
+            precision=args.precision,
+        )
     if args.csv_path:
         write_csv_report(summary, args.csv_path, precision=args.precision)
     if args.html_path:

@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、貼り付けやすいプレーンテキスト、単体 SVG スウォッチシート、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、デザイントークン JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、貼り付けやすいプレーンテキスト、単体 SVG スウォッチシート、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -13,6 +13,7 @@
 
 - Pillow を使い、ローカル画像ファイルから決定的にパレットを抽出します。
 - JSON 出力には、元ファイル名、元ファイルパス、画像サイズ、抽出設定、色の順位、HEX、RGB、カウント、割合、相対輝度、黒/白文字のコントラスト比、読みやすい文字色、安定したトークンラベルが含まれます。
+- メイン画像コマンドでは、Design Tokens Community Group schema メタデータ、安定した色トークンキー、`$type: color`、`$value`、読みやすいコントラスト指針、トークンパイプライン向けの `extensions.swatchStory` 指標を含むデザイントークン JSON を書き出せます。
 - UTF-8 CSV 出力には、表計算ソフトでの並べ替え、絞り込み、軽量なデータ処理に使いやすい安定した列が含まれます。
 - CSS カスタムプロパティ出力には、HEX、RGB の組、黒/白のコントラスト比、読みやすい文字色の変数が含まれます。
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
@@ -26,8 +27,8 @@
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
 - `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
-- `--precision N` により、JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
-- `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられます。
+- `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
+- `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
 - ソースチェックアウト内で、小さな決定的 PNG、安定した授業テーマタグ、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
@@ -45,10 +46,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --tokens story.tokens.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl`、`story.ase` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.tokens.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl`、`story.ase` を書き出します。
 
 同じソースチェックアウトからローカル教材用素材を生成します。
 
@@ -82,6 +83,12 @@ JSON レポートだけを作成します。
 
 ```bash
 swatch-story poster.png --colors 5 --json poster-colors.json
+```
+
+トークンパイプライン向けのデザイントークン JSON を作成します。
+
+```bash
+swatch-story poster.png --colors 5 --tokens poster.tokens.json --title "Poster Palette"
 ```
 
 表計算ソフトで扱いやすい CSV レポートを作成します。
@@ -129,13 +136,13 @@ swatch-story poster.png --colors 6 --sort hue --json poster-hue.json
 コンパクトな確認出力向けに、レポートの割合、相対輝度、コントラスト比を丸めます。
 
 ```bash
-swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
+swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --tokens poster.tokens.json --markdown poster-colors.md --svg poster-colors.svg --html poster-colors.html
 ```
 
 生成レポートにデザイントークン用のラベル接頭辞を適用します。
 
 ```bash
-swatch-story poster.png --colors 5 --label-prefix brand --json poster-colors.json --css poster-colors.css
+swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.json --json poster-colors.json --css poster-colors.css
 ```
 
 2 枚のローカル画像を比較し、JSON、CSV、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
@@ -151,6 +158,8 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。
 
 SVG レポートは、ドキュメントやスライド向けの単体ローカルスウォッチシートです。タイトル、元ファイル名、画像サイズ、抽出設定を表示し、各スウォッチ行には色の矩形、HEX、任意の近似名、割合、輝度、黒/白のコントラスト比、ラベル、読みやすい文字色が含まれます。ユーザー由来のタイトル、元ファイル名、ラベル、名前は XML エスケープされ、元画像自体は埋め込まれません。
+
+デザイントークン JSON レポートは、デザイントークンパイプライン向けです。抽出されたラベルを各 `color` キーとして使うため、`--label-prefix brand` は `brand-1` などのキーを生成します。`--precision N` はトークン内の割合、輝度、コントラスト比、説明文も丸めます。このオプションはメイン画像コマンドだけで使え、`compare` や `gallery` では使えません。
 
 スタイルシートで使える CSS カスタムプロパティを作成します。
 
@@ -331,6 +340,7 @@ Drift score: 66.67%
 
 - `--colors N`: レポートする色数です。2 から 12 まで指定できます。既定値は 6 です。
 - `--json PATH`: JSON レポートを書き出します。
+- `--tokens PATH`: トークンパイプラインに取り込める決定的なデザイントークン JSON レポートを書き出します。レポートには `$schema`、`source`、`title`、パレットラベルをキーにした `color` トークンが含まれ、各トークンには `$type`、`$value`、説明文、`extensions.swatchStory` 指標が入ります。
 - `--csv PATH`: UTF-8 CSV レポートを書き出します。列は `rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`contrast_with_black`、`contrast_with_white`、`best_text_color`、`label`、`name` で安定しています。
 - `--css PATH`: CSS カスタムプロパティを書き出します。
 - `--html PATH`: 単体 HTML レポートを書き出します。
@@ -344,9 +354,9 @@ Drift score: 66.67%
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
 - `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
-- `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
-- `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、CSV、CSS カスタムプロパティ名、Markdown、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
-- `--title TEXT`: HTML、Markdown、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
+- `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
+- `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
+- `--title TEXT`: デザイントークン JSON、HTML、Markdown、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
@@ -367,7 +377,7 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、gallery マニフェスト内容、CLI ファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
