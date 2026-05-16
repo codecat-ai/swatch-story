@@ -89,6 +89,145 @@ def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
     assert "contrast:black 5.3:1 white 4.0:1" in console
 
 
+def test_cli_uses_default_design_token_labels(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+    css_path = tmp_path / "story.css"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--json",
+            str(json_path),
+            "--css",
+            str(css_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert [entry["label"] for entry in summary["palette"]] == ["color-1", "color-2"]
+    css = css_path.read_text(encoding="utf-8")
+    assert "--swatch-story-color-1:" in css
+    assert "--swatch-story-color-2:" in css
+    console = capsys.readouterr().out
+    assert "color-1" in console
+    assert "color-2" in console
+
+
+def test_cli_label_prefix_updates_all_label_outputs(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(255, 0, 0), (0, 0, 255)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+    css_path = tmp_path / "story.css"
+    csv_path = tmp_path / "story.csv"
+    markdown_path = tmp_path / "story.md"
+    text_path = tmp_path / "story.txt"
+    html_path = tmp_path / "story.html"
+    svg_path = tmp_path / "story.svg"
+    gpl_path = tmp_path / "story.gpl"
+    ase_path = tmp_path / "story.ase"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--label-prefix",
+            "brand",
+            "--json",
+            str(json_path),
+            "--css",
+            str(css_path),
+            "--csv",
+            str(csv_path),
+            "--markdown",
+            str(markdown_path),
+            "--text",
+            str(text_path),
+            "--html",
+            str(html_path),
+            "--svg",
+            str(svg_path),
+            "--gpl",
+            str(gpl_path),
+            "--ase",
+            str(ase_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert [entry["label"] for entry in summary["palette"]] == ["brand-1", "brand-2"]
+    assert "--swatch-story-brand-1:" in css_path.read_text(encoding="utf-8")
+    assert ",brand-1," in csv_path.read_text(encoding="utf-8")
+    assert "| brand-1 |" in markdown_path.read_text(encoding="utf-8")
+    assert "| brand-1 |" in text_path.read_text(encoding="utf-8")
+    assert "#1 - brand-1" in html_path.read_text(encoding="utf-8")
+    assert "Label brand-1" in svg_path.read_text(encoding="utf-8")
+    assert "brand-1" in gpl_path.read_text(encoding="utf-8")
+    assert "brand-1" in _ase_strings(ase_path.read_bytes())
+    console = capsys.readouterr().out
+    assert "brand-1" in console
+    assert "brand-2" in console
+
+
+@pytest.mark.parametrize("prefix", ["", "Brand", "brand_name", "brand name", "brand!"])
+def test_cli_rejects_invalid_label_prefix(tmp_path: Path, capsys, prefix: str) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--label-prefix", prefix])
+
+    assert exc_info.value.code == 2
+    error = capsys.readouterr().err
+    assert "--label-prefix" in error
+    assert "lowercase letters, numbers, and hyphens" in error
+
+
+def test_cli_compare_does_not_accept_label_prefix(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before.png"
+    after_path = tmp_path / "after.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(before_path)
+    Image.new("RGB", (1, 1), (0, 0, 255)).save(after_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["compare", str(before_path), str(after_path), "--label-prefix", "brand"])
+
+    assert exc_info.value.code == 2
+    assert "unrecognized arguments: --label-prefix brand" in capsys.readouterr().err
+
+
+def _ase_strings(data: bytes) -> list[str]:
+    assert data[:4] == b"ASEF"
+    block_count = struct.unpack_from(">I", data, 8)[0]
+    offset = 12
+    strings = []
+    for _ in range(block_count):
+        _block_type, block_length = struct.unpack_from(">HI", data, offset)
+        offset += 6
+        block_end = offset + block_length
+        if block_length >= 2:
+            length = struct.unpack_from(">H", data, offset)[0]
+            string_end = offset + 2 + (length * 2)
+            if string_end <= block_end:
+                strings.append(data[offset + 2 : string_end - 2].decode("utf-16-be"))
+        offset = block_end
+    return strings
+
+
 def test_cli_writes_svg_report_with_names_title_and_precision(
     tmp_path: Path, capsys
 ) -> None:
@@ -1013,8 +1152,8 @@ def test_cli_writes_csv_report_with_names(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     csv = csv_path.read_text(encoding="utf-8")
-    assert "1,#0000ff,0,0,255,1,50.0,0.072,2.44,8.61,white,dark,blue\n" in csv
-    assert "2,#ff0000,255,0,0,1,50.0,0.213,5.26,3.99,black,dark,red\n" in csv
+    assert "1,#0000ff,0,0,255,1,50.0,0.072,2.44,8.61,white,color-1,blue\n" in csv
+    assert "2,#ff0000,255,0,0,1,50.0,0.213,5.26,3.99,black,color-2,red\n" in csv
     assert "#ff0000" in capsys.readouterr().out
 
 
@@ -1082,7 +1221,7 @@ def test_cli_writes_text_report_and_prints_summary(tmp_path: Path, capsys) -> No
         "cluster distance 0; sort frequency; ignored color none; names included\n"
     ) in text
     assert (
-        "1. #0000ff | rgb(0, 0, 255) | 50.0% | dark | "
+        "1. #0000ff | rgb(0, 0, 255) | 50.0% | color-1 | "
         "contrast black 2.44:1 white 8.61:1 | text white | name blue"
     ) in text
     assert "#ff0000" in capsys.readouterr().out
@@ -1118,8 +1257,8 @@ def test_cli_writes_gpl_palette_with_names_and_collapsed_title(
         "Name: CLI Story Palette\n"
         "Columns: 2\n"
         "# Generated by swatch-story.\n"
-        "  0   0 255 #0000ff blue\n"
-        "255   0   0 #ff0000 red\n"
+        "  0   0 255 color-1 blue\n"
+        "255   0   0 color-2 red\n"
     )
     assert "#ff0000" in capsys.readouterr().out
 
@@ -1151,8 +1290,8 @@ def test_cli_writes_ase_palette_with_names_and_title(tmp_path: Path, capsys) -> 
     assert data[:4] == b"ASEF"
     assert struct.unpack_from(">HHI", data, 4) == (1, 0, 4)
     assert b"\x00C\x00L\x00I\x00 \x00S\x00t\x00o\x00r\x00y\x00 \x00P" in data
-    assert b"\x00#\x000\x000\x000\x000\x00f\x00f\x00 \x00b\x00l\x00u\x00e" in data
-    assert b"\x00#\x00f\x00f\x000\x000\x000\x000\x00 \x00r\x00e\x00d" in data
+    assert b"\x00c\x00o\x00l\x00o\x00r\x00-\x001\x00 \x00b\x00l\x00u\x00e" in data
+    assert b"\x00c\x00o\x00l\x00o\x00r\x00-\x002\x00 \x00r\x00e\x00d" in data
     assert "#ff0000" in capsys.readouterr().out
 
 

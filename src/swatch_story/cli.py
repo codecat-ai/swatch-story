@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -34,6 +35,8 @@ from swatch_story.report import (
     write_svg_report,
     write_text_report,
 )
+
+LABEL_PREFIX_PATTERN = re.compile(r"[a-z][a-z0-9-]*\Z")
 
 
 def cluster_distance_value(value: str) -> int:
@@ -71,6 +74,15 @@ def min_delta_percent_value(value: str) -> float:
     if percent < 0:
         raise argparse.ArgumentTypeError("--min-delta-percent must be 0 or greater")
     return percent
+
+
+def label_prefix_value(value: str) -> str:
+    if not LABEL_PREFIX_PATTERN.fullmatch(value):
+        raise argparse.ArgumentTypeError(
+            "--label-prefix must start with a lowercase letter and contain only "
+            "lowercase letters, numbers, and hyphens"
+        )
+    return value
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -119,6 +131,17 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Decimal places for report percentages and luminance values, 0-6. "
             "Default preserves existing output."
+        ),
+    )
+    parser.add_argument(
+        "--label-prefix",
+        type=label_prefix_value,
+        default=None,
+        metavar="PREFIX",
+        help=(
+            "Replace palette labels with PREFIX-1, PREFIX-2, etc. PREFIX must "
+            "start with a lowercase letter and contain only lowercase letters, "
+            "numbers, and hyphens."
         ),
     )
     return parser
@@ -260,6 +283,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"swatch-story: {exc}", file=sys.stderr)
         return 2
 
+    if args.label_prefix is not None:
+        apply_label_prefix(summary, args.label_prefix)
+
     if args.json_path:
         write_json_report(summary, args.json_path, precision=args.precision)
     if args.csv_path:
@@ -301,6 +327,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print_summary(summary, precision=args.precision)
     return 0
+
+
+def apply_label_prefix(summary: dict, prefix: str) -> None:
+    for entry in summary["palette"]:
+        entry["label"] = f"{prefix}-{entry['rank']}"
 
 
 def gallery_main(argv: Sequence[str]) -> int:
