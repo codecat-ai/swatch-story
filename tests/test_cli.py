@@ -38,6 +38,46 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_rejects_html_thumbnail_without_html(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--html-thumbnail", str(tmp_path / "thumb.png")])
+
+    assert exc_info.value.code == 2
+    assert "--html-thumbnail requires --html" in capsys.readouterr().err
+
+
+def test_cli_writes_html_report_with_relative_thumbnail(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "source & image.png"
+    Image.new("RGB", (80, 40), (17, 34, 51)).save(image_path)
+    html_path = tmp_path / "reports" / "story.html"
+    thumbnail_path = tmp_path / "reports" / "assets" / "source-thumb.png"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--html",
+            str(html_path),
+            "--html-thumbnail",
+            str(thumbnail_path),
+        ]
+    )
+
+    assert exit_code == 0
+    with Image.open(thumbnail_path) as thumbnail:
+        assert thumbnail.size == (80, 40)
+    html = html_path.read_text(encoding="utf-8")
+    assert '<section class="source-preview"' in html
+    assert 'aria-label="Source image preview"' in html
+    assert '<img src="assets/source-thumb.png"' in html
+    assert "Thumbnail preview of source &amp; image.png" in html
+    assert "#112233" in capsys.readouterr().out
+
+
 def test_cli_writes_wcag_audit_report(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (2, 1))

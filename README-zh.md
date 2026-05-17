@@ -23,6 +23,7 @@
 - 确定性的 GIMP `.gpl` 调色板输出，便于与设计工具互操作。
 - 确定性的 Adobe Swatch Exchange `.ase` 输出，按报告标题分组 RGB 色块。
 - 独立 HTML 联系表报告包含图像元数据、提取设置、可访问的色块卡片、已转义的用户来源值，以及适合在浏览器审阅或设计评审中使用的对比度建议。
+- HTML 报告可通过 `--html-thumbnail PATH` 生成本地旁路缩略图并从报告链接，不会把源图片以 base64 嵌入 HTML。
 - 在终端中输出紧凑摘要，便于快速查看。
 - 通过 `--sample-limit` 配置自动采样目标，同时保留确定性的 `--sample-step` 覆盖，方便可重复审阅。
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
@@ -111,6 +112,12 @@ swatch-story poster.png --colors 5 --csv poster-colors.csv
 swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.html
 ```
 
+创建带有小型旁路缩略图的本地 HTML 报告，方便快速审阅来源视觉效果：
+
+```bash
+swatch-story screenshot.png --colors 8 --html reports/screenshot-story.html --html-thumbnail reports/assets/screenshot-thumb.png
+```
+
 为超大图片调整自动采样目标，而不手动选择固定步长：
 
 ```bash
@@ -175,7 +182,7 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 
 对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
 
-HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。
+HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。把 `--html-thumbnail PATH` 与 `--html PATH` 一起使用时，会从源图片生成一个有尺寸上限的本地缩略图，并尽量用相对路径链接；源图片不会以 base64 嵌入。
 
 SVG 报告是适合文档和幻灯片的独立本地色块单页。它会显示标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选近似名称、占比、亮度、黑/白对比度、标签和可读文字颜色。用户来源的标题、源文件名、标签和名称都会进行 XML 转义，并且不会嵌入源图片本身。
 
@@ -366,6 +373,7 @@ Drift score: 66.67%
 - `--csv PATH`：写入 UTF-8 CSV 报告，包含稳定列：`rank`、`hex`、`r`、`g`、`b`、`count`、`percent`、`luminance`、`contrast_with_black`、`contrast_with_white`、`best_text_color`、`label` 和 `name`。
 - `--css PATH`：写入 CSS 自定义属性。
 - `--html PATH`：写入独立 HTML 报告。
+- `--html-thumbnail PATH`：写入小型本地旁路缩略图，并从 HTML 报告链接。该选项要求同时提供 `--html PATH`；缩略图最长边限制为 320 px，保持宽高比，按需创建父目录，并把图片数据留在本地而不是以 base64 嵌入 HTML。
 - `--markdown PATH`：写入便携 Markdown 报告。
 - `--wcag-audit PATH`：写入确定性的 UTF-8 Markdown 审计，包含源元数据、提取设置、针对黑/白文字的 WCAG 普通/大号文本 AA/AAA 准备度、推荐文字颜色，以及每个色块的一条建议。
 - `--text PATH`：写入 UTF-8 纯文本调色板单页，包含标题、源文件名、图像尺寸、提取设置，以及每个色块一行的排名、十六进制颜色、RGB 三元组、占比、标签、黑/白对比度、最佳文字颜色和可选名称提示。
@@ -410,7 +418,7 @@ pytest -q
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
 - 可选的调色板预设文件，用于在团队和项目之间保存可复用的提取设置。
-- HTML 报告中的可选旁路图像缩略图，用于快速审阅来源视觉效果，而不嵌入完整尺寸图片。
+- 可选的批量报告，把多张图片的审计结果合并为一个团队审阅用 Markdown 或 HTML 文件。
 
 ## 贡献
 

@@ -664,6 +664,7 @@ def render_html_report(
     *,
     title: str = "Swatch Story",
     precision: int | None = None,
+    thumbnail_href: str | None = None,
 ) -> str:
     safe_title = escape(title)
     source_name = escape(str(summary["source"]))
@@ -700,6 +701,16 @@ def render_html_report(
         <dt>Ignored color</dt>
         <dd>{escape(str(ignore_color))}</dd>
       </div>
+"""
+    preview_html = ""
+    if thumbnail_href is not None:
+        thumbnail_src = escape(thumbnail_href, quote=True)
+        thumbnail_alt = escape(f"Thumbnail preview of {summary['source']}", quote=True)
+        preview_html = f"""    <section class="source-preview"
+      aria-label="Source image preview">
+      <h2>Source preview</h2>
+      <img src="{thumbnail_src}" alt="{thumbnail_alt}">
+    </section>
 """
     return f"""<!doctype html>
 <html lang="en">
@@ -754,6 +765,23 @@ def render_html_report(
     dd {{
       margin: 0;
       overflow-wrap: anywhere;
+    }}
+    .source-preview {{
+      margin: 0 0 28px;
+    }}
+    .source-preview h2 {{
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }}
+    .source-preview img {{
+      display: block;
+      max-width: 320px;
+      max-height: 320px;
+      width: auto;
+      height: auto;
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      background: #ffffff;
     }}
     .palette {{
       display: grid;
@@ -831,6 +859,7 @@ def render_html_report(
       </div>
 {ignore_color_html}\
     </dl>
+{preview_html}\
     <section class="palette" aria-label="Extracted color palette">
 {swatches}
     </section>
@@ -838,6 +867,22 @@ def render_html_report(
 </body>
 </html>
 """
+
+
+def write_html_thumbnail(
+    image_path: str | Path,
+    output_path: str | Path,
+    *,
+    max_dimension: int = 320,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    from PIL import Image
+
+    with Image.open(image_path) as image:
+        thumbnail = image.convert("RGB")
+        thumbnail.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        thumbnail.save(path)
 
 
 def render_swatch(entry: dict[str, Any], *, precision: int | None = None) -> str:
@@ -899,11 +944,17 @@ def write_html_report(
     *,
     title: str = "Swatch Story",
     precision: int | None = None,
+    thumbnail_href: str | None = None,
 ) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        render_html_report(summary, title=title, precision=precision),
+        render_html_report(
+            summary,
+            title=title,
+            precision=precision,
+            thumbnail_href=thumbnail_href,
+        ),
         encoding="utf-8",
     )
 
