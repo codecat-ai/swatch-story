@@ -1,5 +1,6 @@
 import json
 import struct
+import sys
 from pathlib import Path
 
 import pytest
@@ -206,6 +207,94 @@ def test_cli_writes_design_tokens_with_precision_and_label_prefix(
     assert first["extensions"]["swatchStory"]["contrastWithWhite"] == 4.0
     assert first["extensions"]["swatchStory"]["bestTextColor"] == "black"
     assert "brand-1" in capsys.readouterr().out
+
+
+def test_cli_main_reads_preset_and_cli_colors_override_wins(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (3, 1))
+    image.putdata([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    image.save(image_path)
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(
+        json.dumps(
+            {
+                "colors": 2,
+                "sample_step": 1,
+                "matte": "000000",
+                "names": True,
+                "precision": 1,
+                "label_prefix": "brand",
+                "title": "Preset Story",
+            }
+        ),
+        encoding="utf-8",
+    )
+    json_path = tmp_path / "story.json"
+    tokens_path = tmp_path / "tokens.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--preset",
+            str(preset_path),
+            "--colors",
+            "3",
+            "--json",
+            str(json_path),
+            "--tokens",
+            str(tokens_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["colors"] == 3
+    assert summary["settings"]["sample_step"] == 1
+    assert summary["settings"]["matte"] == "#000000"
+    assert summary["settings"]["color_names"] is True
+    assert [entry["label"] for entry in summary["palette"]] == [
+        "brand-1",
+        "brand-2",
+        "brand-3",
+    ]
+    assert [entry["percent"] for entry in summary["palette"]] == [33.3, 33.3, 33.3]
+    assert all("name" in entry for entry in summary["palette"])
+    tokens = json.loads(tokens_path.read_text(encoding="utf-8"))
+    assert tokens["title"] == "Preset Story"
+    assert list(tokens["color"]) == ["brand-1", "brand-2", "brand-3"]
+    assert "brand-1" in capsys.readouterr().out
+
+
+def test_cli_main_reads_preset_when_called_from_sys_argv(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (2, 1), (255, 0, 0)).save(image_path)
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(
+        json.dumps({"colors": 2, "sample_step": 1}), encoding="utf-8"
+    )
+    json_path = tmp_path / "story.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "swatch-story",
+            str(image_path),
+            "--preset",
+            str(preset_path),
+            "--json",
+            str(json_path),
+        ],
+    )
+
+    exit_code = main()
+
+    assert exit_code == 0
+    assert json.loads(json_path.read_text(encoding="utf-8"))["settings"]["colors"] == 2
+    assert "#ff0000" in capsys.readouterr().out
 
 
 def test_cli_uses_default_design_token_labels(tmp_path: Path, capsys) -> None:
@@ -423,6 +512,58 @@ def test_cli_batch_writes_markdown_and_html_reports(tmp_path: Path, capsys) -> N
     assert f"Wrote batch report for 2 images to {markdown_path}, {html_path}" in console
 
 
+def test_cli_batch_reads_preset_and_cli_colors_override_wins(
+    tmp_path: Path, capsys
+) -> None:
+    first_path = tmp_path / "one.png"
+    second_path = tmp_path / "two.png"
+    first = Image.new("RGB", (3, 1))
+    first.putdata([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    first.save(first_path)
+    second = Image.new("RGB", (3, 1))
+    second.putdata([(17, 34, 51), (68, 85, 102), (119, 136, 153)])
+    second.save(second_path)
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(
+        json.dumps(
+            {
+                "colors": 2,
+                "sample_step": 1,
+                "names": True,
+                "precision": 1,
+                "title": "Preset Batch",
+            }
+        ),
+        encoding="utf-8",
+    )
+    markdown_path = tmp_path / "batch.md"
+
+    exit_code = main(
+        [
+            "batch",
+            str(first_path),
+            str(second_path),
+            "--preset",
+            str(preset_path),
+            "--colors",
+            "3",
+            "--markdown",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code == 0
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# Preset Batch\n")
+    assert "Settings: colors 3; sample step 1;" in markdown
+    assert "names included" in markdown
+    assert "`#ff0000` 33.3%" in markdown
+    assert "red" in markdown
+    assert (
+        f"Wrote batch report for 2 images to {markdown_path}" in capsys.readouterr().out
+    )
+
+
 def _ase_strings(data: bytes) -> list[str]:
     assert data[:4] == b"ASEF"
     block_count = struct.unpack_from(">I", data, 8)[0]
@@ -488,6 +629,52 @@ def test_cli_rejects_invalid_precision_with_argparse(tmp_path: Path, capsys) -> 
 
     assert exc_info.value.code == 2
     assert "--precision must be between 0 and 6" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("preset_content", "expected"),
+    [
+        ('{"colors": 2, "unexpected": true}', "unknown preset key: unexpected"),
+        ("[]", "preset must be a JSON object"),
+    ],
+)
+def test_cli_rejects_invalid_preset_before_writing_outputs(
+    tmp_path: Path, capsys, preset_content: str, expected: str
+) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(preset_content, encoding="utf-8")
+    json_path = tmp_path / "story.json"
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--preset", str(preset_path), "--json", str(json_path)])
+
+    assert exc_info.value.code == 2
+    assert expected in capsys.readouterr().err
+    assert not json_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("preset_path", "expected"),
+    [
+        ("https://example.com/preset.json", "preset path must be a local file"),
+        ("missing.json", "preset file not found"),
+    ],
+)
+def test_cli_rejects_non_local_or_missing_preset_before_writing_outputs(
+    tmp_path: Path, capsys, preset_path: str, expected: str
+) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+    json_path = tmp_path / "story.json"
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--preset", preset_path, "--json", str(json_path)])
+
+    assert exc_info.value.code == 2
+    assert expected in capsys.readouterr().err
+    assert not json_path.exists()
 
 
 def test_cli_gallery_writes_samples_and_index(tmp_path: Path, capsys) -> None:
@@ -666,6 +853,76 @@ def test_cli_compare_prints_report_and_writes_json(tmp_path: Path, capsys) -> No
     assert report["added"] == ["#ffff00"]
     assert report["removed"] == ["#ff0000"]
     assert report["drift_score"] == 50.0
+
+
+def test_cli_compare_reads_preset_and_cli_min_delta_override_wins(
+    tmp_path: Path, capsys
+) -> None:
+    before_path = tmp_path / "before.png"
+    before = Image.new("RGB", (4, 1))
+    before.putdata([(255, 0, 0), (255, 0, 0), (0, 0, 255), (0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after.png"
+    after = Image.new("RGB", (4, 1))
+    after.putdata([(255, 0, 0), (0, 0, 255), (0, 0, 255), (0, 255, 0)])
+    after.save(after_path)
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(
+        json.dumps(
+            {
+                "colors": 3,
+                "sample_step": 1,
+                "names": True,
+                "precision": 1,
+                "title": "Preset Drift",
+                "min_delta_percent": 40,
+            }
+        ),
+        encoding="utf-8",
+    )
+    json_path = tmp_path / "compare.json"
+    markdown_path = tmp_path / "compare.md"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--preset",
+            str(preset_path),
+            "--min-delta-percent",
+            "20",
+            "--json",
+            str(json_path),
+            "--markdown",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code == 0
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["before"]["settings"]["colors"] == 3
+    assert report["before"]["settings"]["sample_step"] == 1
+    assert report["before"]["settings"]["color_names"] is True
+    assert all("name" in entry for entry in report["before"]["palette"])
+    assert report["changed"] == [
+        {
+            "hex": "#ff0000",
+            "before_percent": 50.0,
+            "after_percent": 25.0,
+            "delta_percent": -25.0,
+        },
+        {
+            "hex": "#0000ff",
+            "before_percent": 25.0,
+            "after_percent": 50.0,
+            "delta_percent": 25.0,
+        },
+    ]
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# Preset Drift\n")
+    assert "25.0%" in markdown
+    assert "Changed colors:" in capsys.readouterr().out
 
 
 def test_cli_compare_writes_html_and_json_reports(tmp_path: Path, capsys) -> None:

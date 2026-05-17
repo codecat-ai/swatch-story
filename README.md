@@ -179,6 +179,24 @@ Apply a design-token label prefix to generated reports:
 swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.json --json poster-colors.json --css poster-colors.css
 ```
 
+Reuse a local JSON extraction preset while letting explicit CLI flags win:
+
+```json
+{
+  "colors": 5,
+  "sample_step": 1,
+  "matte": "111827",
+  "names": true,
+  "precision": 1,
+  "label_prefix": "brand",
+  "title": "Poster Palette"
+}
+```
+
+```bash
+swatch-story poster.png --preset presets/poster.json --colors 6 --json poster-colors.json --tokens poster.tokens.json
+```
+
 Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text drift reports:
 
 ```bash
@@ -196,6 +214,8 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 ```
 
 The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
+
+Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` uses shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
@@ -401,6 +421,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
 - `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
 - `--label-prefix PREFIX`: replace default palette labels with `PREFIX-1`, `PREFIX-2`, and so on for the main image command. `PREFIX` must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. For example, `--label-prefix brand` writes labels such as `brand-1` into JSON, design-token JSON keys, CSV, CSS custom property names, Markdown, WCAG audit, text, HTML, SVG, GIMP `.gpl`, Adobe `.ase`, and terminal output. Compare and gallery commands do not use this option.
+- `--preset PATH`: read reusable defaults from a local JSON preset before running the main image, `compare`, or `batch` command. Explicit CLI flags override preset values. The preset may contain `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`; mode-specific unsupported keys are ignored rather than applied.
 - `--title TEXT`: title for design-token JSON, HTML, Markdown, WCAG audit, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
@@ -432,8 +453,8 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional palette preset files for saving reusable extraction settings across teams and projects.
 - Optional baseline-vs-batch drift review that compares a reference image against a whole set of candidate images.
+- Optional preset discovery command that lists and validates team preset files before a review session.
 
 ## Contributing
 

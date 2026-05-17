@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
 from collections.abc import Sequence
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 from swatch_story.compare import (
     compare_summaries,
@@ -20,10 +24,15 @@ from swatch_story.gallery import GalleryError, create_gallery
 from swatch_story.palette import (
     DEFAULT_SAMPLE_LIMIT,
     MAX_CLUSTER_DISTANCE,
+    MAX_COLORS,
     MIN_CLUSTER_DISTANCE,
+    MIN_COLORS,
     VALID_SORTS,
     PaletteError,
+    normalize_ignore_color,
+    normalize_matte,
     summarize_image,
+    validate_sample_limit,
 )
 from swatch_story.report import (
     write_ase_report,
@@ -43,6 +52,45 @@ from swatch_story.report import (
 )
 
 LABEL_PREFIX_PATTERN = re.compile(r"[a-z][a-z0-9-]*\Z")
+PRESET_KEYS = {
+    "colors",
+    "sample_step",
+    "sample_limit",
+    "ignore_color",
+    "matte",
+    "cluster_distance",
+    "sort",
+    "names",
+    "precision",
+    "label_prefix",
+    "title",
+    "min_delta_percent",
+}
+SHARED_PRESET_KEYS = {
+    "colors",
+    "sample_step",
+    "sample_limit",
+    "ignore_color",
+    "matte",
+    "cluster_distance",
+    "sort",
+    "names",
+}
+MAIN_PRESET_KEYS = SHARED_PRESET_KEYS | {
+    "precision",
+    "label_prefix",
+    "title",
+}
+COMPARE_PRESET_KEYS = SHARED_PRESET_KEYS | {
+    "precision",
+    "title",
+    "min_delta_percent",
+}
+BATCH_PRESET_KEYS = SHARED_PRESET_KEYS | {
+    "precision",
+    "title",
+}
+PRESET_FLAG_BY_KEY = {key: f"--{key.replace('_', '-')}" for key in PRESET_KEYS}
 
 
 def cluster_distance_value(value: str) -> int:
@@ -204,6 +252,21 @@ def build_compare_parser() -> argparse.ArgumentParser:
             "percentage change is at least N. Default: 0.0."
         ),
     )
+    parser.add_argument(
+        "--title",
+        default="Palette Drift Report",
+        help="Title for HTML, Markdown, and text compare reports",
+    )
+    parser.add_argument(
+        "--precision",
+        type=precision_value,
+        default=None,
+        metavar="N",
+        help=(
+            "Decimal places for report percentages and luminance values, 0-6. "
+            "Default preserves existing output."
+        ),
+    )
     return parser
 
 
@@ -272,6 +335,11 @@ def build_batch_parser() -> argparse.ArgumentParser:
 
 
 def add_palette_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--preset",
+        dest="preset_path",
+        help="Read extraction and report defaults from a local JSON preset file.",
+    )
     parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
     parser.add_argument(
         "--sample-step",
@@ -337,6 +405,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv)
+    apply_preset(parser, args, argv, MAIN_PRESET_KEYS)
     if args.html_thumbnail_path and not args.html_path:
         parser.error("--html-thumbnail requires --html")
 
@@ -429,6 +498,134 @@ def apply_label_prefix(summary: dict, prefix: str) -> None:
         entry["label"] = f"{prefix}-{entry['rank']}"
 
 
+def apply_preset(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    argv: Sequence[str],
+    applicable_keys: set[str],
+) -> None:
+    if not getattr(args, "preset_path", None):
+        return
+    preset = load_preset(parser, args.preset_path)
+    for key in applicable_keys:
+        if key in preset and PRESET_FLAG_BY_KEY[key] not in argv:
+            setattr(args, key, preset[key])
+
+
+def load_preset(parser: argparse.ArgumentParser, preset_path: str) -> dict[str, Any]:
+    parsed = urlparse(preset_path)
+    if parsed.scheme and "://" in preset_path:
+        parser.error("preset path must be a local file")
+
+    path = Path(preset_path)
+    if not path.is_file():
+        parser.error(f"preset file not found: {path}")
+
+    try:
+        raw_preset = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        parser.error(f"could not read preset file: {exc}")
+    except json.JSONDecodeError as exc:
+        parser.error(f"invalid preset JSON: {exc.msg}")
+
+    if not isinstance(raw_preset, dict):
+        parser.error("preset must be a JSON object")
+
+    unknown_keys = sorted(set(raw_preset) - PRESET_KEYS)
+    if unknown_keys:
+        parser.error(f"unknown preset key: {unknown_keys[0]}")
+
+    return {
+        key: validate_preset_value(parser, key, value)
+        for key, value in raw_preset.items()
+    }
+
+
+def validate_preset_value(
+    parser: argparse.ArgumentParser, key: str, value: object
+) -> Any:
+    try:
+        if key == "colors":
+            colors = int_preset_value(key, value)
+            if colors < MIN_COLORS or colors > MAX_COLORS:
+                raise argparse.ArgumentTypeError(
+                    f"--colors must be between {MIN_COLORS} and {MAX_COLORS}"
+                )
+            return colors
+        if key == "sample_step":
+            if value is None:
+                return None
+            sample_step = int_preset_value(key, value)
+            if sample_step < 1:
+                raise argparse.ArgumentTypeError("--sample-step must be 1 or greater")
+            return sample_step
+        if key == "sample_limit":
+            sample_limit = int_preset_value(key, value)
+            validate_sample_limit(sample_limit)
+            return sample_limit
+        if key == "cluster_distance":
+            return cluster_distance_value(str(int_preset_value(key, value)))
+        if key == "precision":
+            if value is None:
+                return None
+            return precision_value(str(int_preset_value(key, value)))
+        if key == "min_delta_percent":
+            return min_delta_percent_value(str(float_preset_value(key, value)))
+        if key == "ignore_color":
+            if value is None:
+                return None
+            if not isinstance(value, str):
+                raise argparse.ArgumentTypeError("--ignore-color must be a string")
+            normalize_ignore_color(value)
+            return value
+        if key == "matte":
+            if value is None:
+                return None
+            if not isinstance(value, str):
+                raise argparse.ArgumentTypeError("--matte must be a string")
+            normalize_matte(value)
+            return value
+        if key == "sort":
+            if not isinstance(value, str) or value not in VALID_SORTS:
+                choices = ", ".join(VALID_SORTS)
+                raise argparse.ArgumentTypeError(f"--sort must be one of: {choices}")
+            return value
+        if key == "names":
+            if not isinstance(value, bool):
+                raise argparse.ArgumentTypeError("--names must be true or false")
+            return value
+        if key == "label_prefix":
+            if value is None:
+                return None
+            if not isinstance(value, str):
+                raise argparse.ArgumentTypeError("--label-prefix must be a string")
+            return label_prefix_value(value)
+        if key == "title":
+            if not isinstance(value, str):
+                raise argparse.ArgumentTypeError("--title must be a string")
+            return value
+    except PaletteError as exc:
+        parser.error(str(exc))
+    except argparse.ArgumentTypeError as exc:
+        parser.error(f"invalid preset value for {key}: {exc}")
+
+    raise AssertionError(f"unhandled preset key: {key}")
+
+
+def int_preset_value(key: str, value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise argparse.ArgumentTypeError(
+            f"--{key.replace('_', '-')} must be an integer"
+        )
+    return value
+
+
+def float_preset_value(key: str, value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise argparse.ArgumentTypeError(f"--{key.replace('_', '-')} must be a number")
+    return float(value)
+
+
 def relative_href(from_html_path: Path, target_path: Path) -> str:
     try:
         href = os.path.relpath(
@@ -466,6 +663,7 @@ def gallery_main(argv: Sequence[str]) -> int:
 def batch_main(argv: Sequence[str]) -> int:
     parser = build_batch_parser()
     args = parser.parse_args(argv)
+    apply_preset(parser, args, argv, BATCH_PRESET_KEYS)
     if len(args.images) < 2:
         parser.error("at least two image paths are required")
     if not args.markdown_path and not args.html_path:
@@ -516,6 +714,7 @@ def batch_main(argv: Sequence[str]) -> int:
 def compare_main(argv: Sequence[str]) -> int:
     parser = build_compare_parser()
     args = parser.parse_args(argv)
+    apply_preset(parser, args, argv, COMPARE_PRESET_KEYS)
 
     try:
         before_summary = summarize_image(
@@ -549,18 +748,51 @@ def compare_main(argv: Sequence[str]) -> int:
         after_summary,
         min_delta_percent=args.min_delta_percent,
     )
+    output_report = compare_report_with_precision(report, args.precision)
     if args.json_path:
-        write_compare_json(report, args.json_path)
+        write_compare_json(output_report, args.json_path)
     if args.csv_path:
-        write_compare_csv_report(report, args.csv_path)
+        write_compare_csv_report(output_report, args.csv_path)
     if args.html_path:
-        write_compare_html_report(report, args.html_path)
+        write_compare_html_report(output_report, args.html_path, title=args.title)
     if args.markdown_path:
-        write_compare_markdown_report(report, args.markdown_path)
+        write_compare_markdown_report(
+            output_report,
+            args.markdown_path,
+            title=args.title,
+        )
     if args.text_path:
-        write_compare_text_report(report, args.text_path)
-    print(render_compare_text(report), end="")
+        write_compare_text_report(output_report, args.text_path, title=args.title)
+    print(render_compare_text(output_report), end="")
     return 0
+
+
+def compare_report_with_precision(
+    report: dict[str, Any], precision: int | None
+) -> dict[str, Any]:
+    if precision is None:
+        return report
+    rounded_report = deepcopy(report)
+    for side_key in ("before", "after"):
+        for entry in rounded_report[side_key]["palette"]:
+            round_palette_entry(entry, precision)
+    for entry in rounded_report["changed"]:
+        for key in ("before_percent", "after_percent", "delta_percent"):
+            entry[key] = round(float(entry[key]), precision)
+    rounded_report["drift_score"] = round(
+        float(rounded_report["drift_score"]), precision
+    )
+    return rounded_report
+
+
+def round_palette_entry(entry: dict[str, Any], precision: int) -> None:
+    for key in (
+        "percent",
+        "luminance",
+        "contrast_with_black",
+        "contrast_with_white",
+    ):
+        entry[key] = round(float(entry[key]), precision)
 
 
 def print_summary(summary: dict, *, precision: int | None = None) -> None:
