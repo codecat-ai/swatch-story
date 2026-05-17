@@ -35,7 +35,7 @@
 - `--preset PATH` 会为主图像、`compare`、`baseline` 和 `batch` 命令读取可复用的本地 JSON 抽取预设，并允许显式 CLI 标志覆盖预设值。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
-- 基准漂移审阅可以把一张参考图像与多个候选图像对比，按漂移分数排序，并写入确定性的 JSON、Markdown 和纯文本报告。
+- 基准漂移审阅可以把一张参考图像与多个候选图像对比，按漂移分数排序，并写入确定性的 JSON、Markdown、纯文本和独立 HTML 仪表盘报告。
 - 批量团队审阅报告可把两张或更多本地图像审计合并为一个确定性的 Markdown 和/或独立 HTML 文件；每张图片都有一个章节/卡片，包含主色、调色板行、对比度建议、已转义的用户来源值和共享提取设置。
 - 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、稳定的课程主题标签、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
 
@@ -74,7 +74,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-revie
 用参考调色板对候选图像排序：
 
 ```bash
-swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt
+swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt --html baseline-review.html
 ```
 
 ## 示例
@@ -218,10 +218,10 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 用一张基准图像对比多个候选图像，并按漂移排序：
 
 ```bash
-swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt --html baseline-drift.html
 ```
 
-`baseline` 命令要求一张基准图像、至少一张候选图像，并且至少提供 `--json PATH`、`--markdown PATH` 或 `--text PATH` 之一；三个输出可以同时请求。它会为每个候选图像复用 `compare` 的漂移逻辑，JSON 中的候选项保持输入顺序并包含排名和漂移分数，Markdown/文本摘要按漂移分数降序排列。基准报告包含基准来源元数据、候选来源元数据、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细，以及已转义的用户来源标题、名称和路径。
+`baseline` 命令要求一张基准图像、至少一张候选图像，并且至少提供 `--json PATH`、`--markdown PATH`、`--text PATH` 或 `--html PATH` 之一；四种输出可以同时请求。它会为每个候选图像复用 `compare` 的漂移逻辑，JSON 中的候选项保持输入顺序并包含排名和漂移分数，Markdown/文本/HTML 摘要按漂移分数降序排列。基准报告包含基准来源元数据、候选来源元数据、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细，以及已转义的用户来源标题、名称和路径。基准 HTML 报告是独立仪表盘，包含确定性内联 CSS、元数据面板、具有可排序外观的候选排名表，以及共有、新增、移除和变化颜色列表的可视色块。
 
 把多张本地图像审计合并为一个团队审阅报告：
 
@@ -445,7 +445,7 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含 schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。这些输出可以同时请求。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含 schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。`--html PATH` 会写入独立排名仪表盘，其中包含已转义的元数据，以及共有、新增、移除和变化颜色列表的可视色块。这些输出可以同时请求。
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` 会在每张图片上复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision` 和 `--title`。它要求至少两个图像路径和至少一个输出路径。`--markdown PATH` 会写入确定性的 UTF-8 团队审阅 Markdown 报告，`--html PATH` 会写入独立 HTML 团队审阅报告；两者可以同时请求。批量模式不使用 `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase` 或 `--html-thumbnail`。
 
@@ -473,7 +473,6 @@ pytest -q
 
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
-- 可选的 HTML 基准漂移仪表盘，提供可排序的候选行和调色板预览。
 - 可选的预设发现命令，用于在审阅会话前列出并验证团队预设文件。
 
 ## 贡献

@@ -1,6 +1,7 @@
 from swatch_story.compare import (
     baseline_report,
     compare_summaries,
+    render_baseline_html_report,
     render_baseline_markdown_report,
     render_baseline_text_report,
     render_compare_csv_report,
@@ -8,6 +9,7 @@ from swatch_story.compare import (
     render_compare_markdown_report,
     render_compare_text,
     render_compare_text_report,
+    write_baseline_html_report,
 )
 
 
@@ -382,6 +384,50 @@ def test_render_baseline_markdown_report_ranks_and_escapes_candidates() -> None:
     assert "## 1. changed &lt;final&gt;.png" in markdown
     assert "Changed colors: `#222222 (50.0% to 50.0%, 0.0%)`" in markdown
     assert "<Review>" not in markdown
+
+
+def test_render_baseline_html_report_ranks_escapes_and_shows_swatches() -> None:
+    report = baseline_report(
+        summary("base | ref.png", ["#111111", "#222222", "#333333"]),
+        [
+            summary("steady.png", ["#111111", "#222222", "#333333"]),
+            summary('changed "final"<script>.png', ["#222222", "#444444", "#555555"]),
+        ],
+        title="Baseline <Review>",
+    )
+
+    html = render_baseline_html_report(report)
+
+    assert html.startswith("<!doctype html>\n")
+    assert "<title>Baseline &lt;Review&gt;</title>" in html
+    assert "<h1>Baseline &lt;Review&gt;</h1>" in html
+    assert "Baseline source path</dt>" in html
+    assert "fixtures/base | ref.png" in html
+    assert "Candidate count</dt>" in html
+    assert "2</dd>" in html
+    assert "<script>" not in html
+    assert "changed &quot;final&quot;&lt;script&gt;.png" in html
+    assert html.index("<td>1</td>") < html.index("<td>2</td>")
+    assert html.index("changed &quot;final&quot;") < html.index("steady.png")
+    assert '<th scope="col">Changed</th>' in html
+    assert "#222222 (50.0% to 50.0%, 0.0%)" in html
+    assert 'style="background: #444444"' in html
+    assert 'aria-label="#444444"' in html
+    assert 'class="none">None<' in html
+    assert "<script>" not in html
+
+
+def test_write_baseline_html_report_creates_parent_directories(tmp_path) -> None:
+    report = baseline_report(
+        summary("base.png", ["#111111"]),
+        [summary("candidate.png", ["#222222"])],
+        title="Baseline Drift",
+    )
+    output = tmp_path / "nested" / "baseline.html"
+
+    write_baseline_html_report(report, output)
+
+    assert output.read_text(encoding="utf-8").startswith("<!doctype html>\n")
 
 
 def test_render_baseline_text_report_is_compact_ranked_and_single_line() -> None:

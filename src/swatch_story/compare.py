@@ -195,6 +195,179 @@ def write_baseline_text_report(report: dict[str, Any], output_path: str | Path) 
     path.write_text(render_baseline_text_report(report), encoding="utf-8")
 
 
+def render_baseline_html_report(report: dict[str, Any]) -> str:
+    safe_title = escape(str(report["title"]))
+    baseline = report["baseline"]
+    ranked = _ranked_baseline_candidates(report["candidates"])
+    candidate_rows = "\n".join(
+        _render_baseline_candidate_row(candidate) for candidate in ranked
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe_title}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f5;
+      color: #222222;
+    }}
+    body {{
+      margin: 0;
+      padding: 32px;
+    }}
+    main {{
+      max-width: 1180px;
+      margin: 0 auto;
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: 2.4rem;
+      line-height: 1.05;
+    }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 0 0 28px;
+    }}
+    .panel {{
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 16px;
+    }}
+    dt {{
+      color: #666666;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin: 0 0 4px;
+      text-transform: uppercase;
+    }}
+    dd {{
+      margin: 0;
+      overflow-wrap: anywhere;
+    }}
+    .table-wrap {{
+      overflow-x: auto;
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      background: #ffffff;
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }}
+    caption {{
+      padding: 14px 16px;
+      text-align: left;
+      font-weight: 700;
+    }}
+    th,
+    td {{
+      border-top: 1px solid #eeeeee;
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }}
+    th {{
+      color: #444444;
+      font-size: 0.78rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }}
+    th.sortable::after {{
+      content: " ^v";
+      color: #777777;
+      font-weight: 400;
+    }}
+    .numeric {{
+      text-align: right;
+      white-space: nowrap;
+    }}
+    .chips {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #dddddd;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #ffffff;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }}
+    .swatch {{
+      width: 18px;
+      height: 18px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }}
+    .none {{
+      color: #666666;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{safe_title}</h1>
+    <dl class="meta" aria-label="Baseline drift metadata">
+      <div class="panel">
+        <dt>Baseline source path</dt>
+        <dd>{escape(str(baseline["source_path"]))}</dd>
+      </div>
+      <div class="panel">
+        <dt>Candidate count</dt>
+        <dd>{len(report["candidates"])}</dd>
+      </div>
+    </dl>
+    <div class="table-wrap">
+      <table>
+        <caption>Ranked baseline drift candidates</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="sortable">Rank</th>
+            <th scope="col" class="sortable">Candidate</th>
+            <th scope="col" class="sortable">Source path</th>
+            <th scope="col" class="sortable numeric" aria-sort="descending">Drift</th>
+            <th scope="col">Shared</th>
+            <th scope="col">Added</th>
+            <th scope="col">Removed</th>
+            <th scope="col">Changed</th>
+          </tr>
+        </thead>
+        <tbody>
+{candidate_rows}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
+"""
+
+
+def write_baseline_html_report(report: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_baseline_html_report(report), encoding="utf-8")
+
+
 def write_baseline_json(report: dict[str, Any], output_path: str | Path) -> None:
     write_json_report(report, output_path)
 
@@ -777,7 +950,9 @@ def _render_color_list(values: list[str]) -> str:
         return '<p class="none">None</p>'
     items = "\n".join(
         f'          <li class="chip"><span class="swatch" '
-        f'style="background: {_safe_css_hex_color(value)}"></span>{escape(value)}</li>'
+        f'style="background: {_safe_css_hex_color(value)}" '
+        f'aria-label="{escape(value)}" title="{escape(value)}"></span>'
+        f"{escape(value)}</li>"
         for value in values
     )
     return f"""<ul class="chips">
@@ -790,13 +965,29 @@ def _render_changed_color_list(values: list[dict[str, Any]]) -> str:
         return '<p class="none">None</p>'
     items = "\n".join(
         f'          <li class="chip"><span class="swatch" '
-        f'style="background: {_safe_css_hex_color(str(value["hex"]))}"></span>'
+        f'style="background: {_safe_css_hex_color(str(value["hex"]))}" '
+        f'aria-label="{escape(str(value["hex"]))}" '
+        f'title="{escape(str(value["hex"]))}"></span>'
         f"{escape(_format_changed_color(value))}</li>"
         for value in values
     )
     return f"""<ul class="chips">
 {items}
         </ul>"""
+
+
+def _render_baseline_candidate_row(candidate: dict[str, Any]) -> str:
+    source = candidate["source"]
+    return f"""          <tr>
+            <td>{candidate["rank"]}</td>
+            <td>{escape(str(source["source"]))}</td>
+            <td>{escape(str(source["source_path"]))}</td>
+            <td class="numeric">{escape(str(candidate["drift_score"]))}%</td>
+            <td>{_render_color_list(candidate["shared"])}</td>
+            <td>{_render_color_list(candidate["added"])}</td>
+            <td>{_render_color_list(candidate["removed"])}</td>
+            <td>{_render_changed_color_list(candidate["changed"])}</td>
+          </tr>"""
 
 
 def _safe_css_hex_color(value: str) -> str:
