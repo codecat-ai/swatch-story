@@ -34,6 +34,7 @@
 - `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
+- 2 枚以上のローカル画像監査を、画像ごとのセクション/カード、主要色、パレット行、コントラスト指針、エスケープ済みユーザー由来値、共通抽出設定を含む決定的な Markdown または単体 HTML のチームレビューレポートにまとめられます。
 - ソースチェックアウト内で、小さな決定的 PNG、安定した授業テーマタグ、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
 
 ## インストール
@@ -61,6 +62,12 @@ swatch-story gallery demo-gallery
 ```
 
 gallery コマンドは小さな決定的 PNG ファイルと `demo-gallery/README.md` を書き出します。README には、それらのサンプルからパレットやレポートを作るコマンドとタグが含まれます。教材やテストで期待される主要色、パレット HEX 値、安定した授業テーマタグを含む `demo-gallery/manifest.json` が必要な場合は、`--manifest` を追加します。
+
+複数のローカル画像向けにチームレビューレポートを作成します。
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-review.md --html team-review.html
+```
 
 ## 例
 
@@ -175,6 +182,14 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 `compare` コマンドは、前後の画像パス、それぞれの主要色、共有色、追加色、削除色、共有色の割合変化、ドリフトスコアを含む簡潔なターミナルレポートを表示します。スコアは選択済みパレットの HEX 値のうち変化した割合で、`100 * (1 - shared / union)` として計算します。`0%` は選択済みパレットの HEX 値が同一であること、`100%` は重なりがないことを意味します。`--min-delta-percent N` を使うと、絶対値で `N` 未満の割合変化しかない共有色の詳細行を非表示にできます。追加色と削除色は引き続き表示されます。
 
 比較 CSV レポートは、スプレッドシートでパレットドリフトを確認するための決定的な UTF-8 表です。比較 HTML レポートは、各画像にコンパクトな CSS-only 横並びパレットプレビューを含む、ブラウザーで確認できる単体のローカルファイルです。比較 Markdown レポートは、メモ、Issue コメント、デザインドキュメントに向いたポータブルな表です。比較プレーンテキストレポートは、メール、チケット、レビューログ向けの決定的な UTF-8 ドリフトシートです。これらのレポートは、安全に表現された前後ソース名とパス、各側の主要色、共有色、追加色、削除色、フィルター済みの色変化詳細、空の変更リストに対する明確な `None` 状態、ドリフトスコアを含みます。同じ `compare` コマンドで `--json`、`--csv`、`--html`、`--markdown`、`--text` を同時に指定できます。
+
+複数のローカル画像監査を 1 つのチームレビューレポートにまとめます。
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --names --title "Campaign Palette Review" --markdown campaign-review.md --html campaign-review.html
+```
+
+`batch` コマンドには少なくとも 2 つの画像パスと、`--markdown PATH` または `--html PATH` の少なくとも一方が必要です。両方の出力を同時に指定できます。すべての画像に同じ決定的なパレット抽出設定を適用し、各ソース画像についてソース名/パス、画像サイズ、主要色、パレット行/カード、黒/白文字のコントラスト指針を含む Markdown セクションまたは HTML カードを書き出します。ユーザー由来のタイトル、ファイル名、パス、ラベル、名前はエスケープされ、ファイルは決定的な UTF-8 として書き込まれます。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
 
@@ -391,6 +406,8 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
+
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドと読みやすいサンプルタグを含む Markdown `README.md` gallery も生成します。`--manifest` は、schema version `1`、generator 名、サンプルファイル名、寸法、ストーリー、タグ、期待される主要色、期待されるパレット HEX 値を含む決定的な UTF-8 `manifest.json` も書き出します。`--tag` は繰り返し指定でき、要求したタグをすべて含むサンプルだけを生成します。照合は大文字小文字を区別せず、不明なタグや一致しないフィルターはファイルを書き出す前に失敗します。`--no-index` は `README.md` だけを省略するため、`--manifest` と組み合わせられます。`--force` がない限り、`manifest.json` を含む既存の gallery ファイルは上書きしません。
 
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
@@ -407,7 +424,7 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、CLI ファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、単一画像/比較/batch レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、ユーザー由来レポート値のエスケープ、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
@@ -416,7 +433,7 @@ pytest -q
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
 - チームやプロジェクト間で再利用できる抽出設定を保存するための、任意のパレットプリセットファイル。
-- 複数画像の監査結果を 1 つのチーム向け Markdown または HTML レビューにまとめる、任意のバッチレポート。
+- 参照画像を候補画像セット全体と比較する、任意のベースライン対 batch ドリフトレビュー。
 
 ## コントリビュート
 

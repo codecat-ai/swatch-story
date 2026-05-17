@@ -34,6 +34,7 @@
 - `--label-prefix PREFIX` 会在主图像命令中把默认的 `color-1`、`color-2` 标签替换为 `brand-1`、`brand-2` 这样的设计令牌标签，也会影响 `--tokens` 的键名。
 - 可选的 `--names` 提示会把颜色映射到一小组内置的近似常见名称，例如 red、teal、blue、brown、black、white 和 gray。
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
+- 批量团队审阅报告可把两张或更多本地图像审计合并为一个确定性的 Markdown 和/或独立 HTML 文件；每张图片都有一个章节/卡片，包含主色、调色板行、对比度建议、已转义的用户来源值和共享提取设置。
 - 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、稳定的课程主题标签、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
 
 ## 安装
@@ -61,6 +62,12 @@ swatch-story gallery demo-gallery
 ```
 
 gallery 命令会写入小型确定性 PNG 文件，并生成 `demo-gallery/README.md`，其中包含针对这些示例提取调色板和报告的命令及标签。当课程材料或测试需要包含预期主色、调色板十六进制值和稳定课程主题标签的 `demo-gallery/manifest.json` 时，可以添加 `--manifest`。
+
+为多张本地图像创建团队审阅报告：
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-review.md --html team-review.html
+```
 
 ## 示例
 
@@ -181,6 +188,14 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 `compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色、共有颜色占比变化和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。使用 `--min-delta-percent N` 可以隐藏绝对占比变化小于 `N` 的共有颜色明细行；新增和移除颜色仍会报告。
 
 对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
+
+把多张本地图像审计合并为一个团队审阅报告：
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --names --title "Campaign Palette Review" --markdown campaign-review.md --html campaign-review.html
+```
+
+`batch` 命令要求至少两个图像路径，并且至少提供 `--markdown PATH` 或 `--html PATH` 之一；两个输出可以同时请求。它会对每张图片复用相同的确定性调色板提取设置，并为每个来源图像写入一个 Markdown 章节或 HTML 卡片，包含来源名称/路径、图像尺寸、主色、调色板行/卡片，以及黑/白文字对比度建议。用户来源的标题、文件名、路径、标签和名称都会被转义，文件以确定性 UTF-8 写入。
 
 HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。把 `--html-thumbnail PATH` 与 `--html PATH` 一起使用时，会从源图片生成一个有尺寸上限的本地缩略图，并尽量用相对路径链接；源图片不会以 base64 嵌入。
 
@@ -393,6 +408,8 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` 会在每张图片上复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision` 和 `--title`。它要求至少两个图像路径和至少一个输出路径。`--markdown PATH` 会写入确定性的 UTF-8 团队审阅 Markdown 报告，`--html PATH` 会写入独立 HTML 团队审阅报告；两者可以同时请求。批量模式不使用 `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase` 或 `--html-thumbnail`。
+
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令和可读示例标签的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、标签、预期主色和预期调色板十六进制值。`--tag` 可以重复使用，只生成包含所有请求标签的示例；匹配不区分大小写，未知标签或无匹配结果会在写入文件前失败。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 
 MVP 不读取配置文件，也不会获取远程图片。
@@ -409,7 +426,7 @@ python -m build
 
 ## 测试
 
-测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、报告渲染、设计令牌 JSON 输出、gallery 清单内容和 CLI 文件输出。
+测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、单图/对比/批量报告渲染、设计令牌 JSON 输出、gallery 清单内容、用户来源报告值的转义和 CLI 文件输出。
 
 ```bash
 pytest -q
@@ -418,7 +435,7 @@ pytest -q
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
 - 可选的调色板预设文件，用于在团队和项目之间保存可复用的提取设置。
-- 可选的批量报告，把多张图片的审计结果合并为一个团队审阅用 Markdown 或 HTML 文件。
+- 可选的基准到批量漂移审阅，用一张参考图像对比一组候选图像。
 
 ## 贡献
 

@@ -27,6 +27,8 @@ from swatch_story.palette import (
 )
 from swatch_story.report import (
     write_ase_report,
+    write_batch_html_report,
+    write_batch_markdown_report,
     write_css_report,
     write_csv_report,
     write_gpl_report,
@@ -238,6 +240,37 @@ def build_gallery_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_batch_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="swatch-story batch",
+        description="Combine multiple local image palette audits into one team report.",
+    )
+    parser.add_argument("images", nargs="+", help="Local image paths")
+    add_palette_options(parser)
+    parser.add_argument(
+        "--title",
+        default="Swatch Story Batch Review",
+        help="Title for Markdown and HTML batch reports",
+    )
+    parser.add_argument(
+        "--precision",
+        type=precision_value,
+        default=None,
+        metavar="N",
+        help=(
+            "Decimal places for report percentages and luminance values, 0-6. "
+            "Default preserves existing output."
+        ),
+    )
+    parser.add_argument(
+        "--markdown", dest="markdown_path", help="Write Markdown batch report to PATH"
+    )
+    parser.add_argument(
+        "--html", dest="html_path", help="Write standalone HTML batch report to PATH"
+    )
+    return parser
+
+
 def add_palette_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--colors", type=int, default=6, help="Palette size, 2-12")
     parser.add_argument(
@@ -299,6 +332,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return compare_main(argv[1:])
     if argv[:1] == ["gallery"]:
         return gallery_main(argv[1:])
+    if argv[:1] == ["batch"]:
+        return batch_main(argv[1:])
 
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -425,6 +460,56 @@ def gallery_main(argv: Sequence[str]) -> int:
         f"Wrote sample fixture gallery to {Path(args.output_dir)} "
         f"({len(written)} files)"
     )
+    return 0
+
+
+def batch_main(argv: Sequence[str]) -> int:
+    parser = build_batch_parser()
+    args = parser.parse_args(argv)
+    if len(args.images) < 2:
+        parser.error("at least two image paths are required")
+    if not args.markdown_path and not args.html_path:
+        parser.error("at least one of --markdown or --html is required")
+
+    try:
+        summaries = [
+            summarize_image(
+                Path(image),
+                colors=args.colors,
+                sample_step=args.sample_step,
+                sample_limit=args.sample_limit,
+                include_color_names=args.names,
+                ignore_color=args.ignore_color,
+                matte=args.matte,
+                cluster_distance=args.cluster_distance,
+                sort=args.sort,
+            )
+            for image in args.images
+        ]
+    except PaletteError as exc:
+        print(f"swatch-story batch: {exc}", file=sys.stderr)
+        return 2
+
+    written = []
+    if args.markdown_path:
+        write_batch_markdown_report(
+            summaries,
+            args.markdown_path,
+            title=args.title,
+            precision=args.precision,
+        )
+        written.append(Path(args.markdown_path))
+    if args.html_path:
+        write_batch_html_report(
+            summaries,
+            args.html_path,
+            title=args.title,
+            precision=args.precision,
+        )
+        written.append(Path(args.html_path))
+
+    destinations = ", ".join(str(path) for path in written)
+    print(f"Wrote batch report for {len(summaries)} images to {destinations}")
     return 0
 
 

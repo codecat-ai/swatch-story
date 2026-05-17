@@ -337,6 +337,114 @@ def write_markdown_report(
     )
 
 
+def render_batch_markdown_report(
+    summaries: list[dict[str, Any]],
+    *,
+    title: str = "Swatch Story Batch Review",
+    precision: int | None = None,
+) -> str:
+    settings = _settings_summary(summaries[0]) if summaries else "Settings: none"
+    lines = [
+        f"# {markdown_escape(title)}",
+        "",
+        f"Images: {len(summaries)}  ",
+        markdown_escape(settings),
+        "",
+    ]
+    for summary in summaries:
+        source = markdown_escape(str(summary["source"]))
+        source_path = markdown_escape(
+            str(summary.get("source_path", summary["source"]))
+        )
+        width = summary["size"]["width"]
+        height = summary["size"]["height"]
+        lines.extend(
+            [
+                f"## {source}",
+                "",
+                f"Source path: `{source_path}`  ",
+                f"Size: {width} x {height} px  ",
+                f"Dominant colors: {_batch_markdown_dominant(summary, precision)}",
+                "",
+                _batch_markdown_table(summary, precision),
+                "",
+                "Contrast guidance:",
+            ]
+        )
+        for entry in summary["palette"]:
+            lines.append(
+                "- "
+                f"`{markdown_escape(str(entry['hex']))}`: "
+                f"{markdown_escape(_batch_guidance(entry, precision))}"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _batch_markdown_dominant(summary: dict[str, Any], precision: int | None) -> str:
+    return ", ".join(
+        f"`{markdown_escape(str(entry['hex']))}` "
+        f"{_format_decimal(entry['percent'], precision)}%"
+        for entry in summary["palette"][:3]
+    )
+
+
+def _batch_markdown_table(summary: dict[str, Any], precision: int | None) -> str:
+    palette = summary["palette"]
+    include_names = any("name" in entry for entry in palette)
+    header = "| Rank | Color | RGB | Percent | Luminance | Text | Label |"
+    divider = "| ---: | --- | --- | ---: | ---: | --- | --- |"
+    if include_names:
+        header = "| Rank | Color | Name | RGB | Percent | Luminance | Text | Label |"
+        divider = "| ---: | --- | --- | --- | ---: | ---: | --- | --- |"
+    lines = [header, divider]
+    for entry in palette:
+        rgb = ", ".join(str(value) for value in entry["rgb"])
+        row = [
+            str(entry["rank"]),
+            f"`{markdown_escape(str(entry['hex']))}`",
+        ]
+        if include_names:
+            row.append(markdown_escape(str(entry.get("name", ""))))
+        row.extend(
+            [
+                f"`{markdown_escape(rgb)}`",
+                f"{_format_decimal(entry['percent'], precision)}%",
+                _format_decimal(entry["luminance"], precision),
+                markdown_escape(str(entry["best_text_color"])),
+                markdown_escape(str(entry["label"])),
+            ]
+        )
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
+def _batch_guidance(entry: dict[str, Any], precision: int | None) -> str:
+    return (
+        f"Use {_single_line(entry['best_text_color'])} text; "
+        f"contrast {_format_contrast_pair(entry, precision, separator='; ')}"
+    )
+
+
+def write_batch_markdown_report(
+    summaries: list[dict[str, Any]],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story Batch Review",
+    precision: int | None = None,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_batch_markdown_report(
+            summaries,
+            title=title,
+            precision=precision,
+        ),
+        encoding="utf-8",
+    )
+
+
 def render_wcag_audit_report(
     summary: dict[str, Any],
     *,
@@ -867,6 +975,212 @@ def render_html_report(
 </body>
 </html>
 """
+
+
+def render_batch_html_report(
+    summaries: list[dict[str, Any]],
+    *,
+    title: str = "Swatch Story Batch Review",
+    precision: int | None = None,
+) -> str:
+    safe_title = escape(title)
+    settings = escape(
+        _settings_summary(summaries[0]) if summaries else "Settings: none"
+    )
+    image_count = len(summaries)
+    cards = "\n".join(
+        _render_batch_image_card(summary, precision=precision) for summary in summaries
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe_title}</title>
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7f5;
+      color: #222222;
+    }}
+    body {{
+      margin: 0;
+      padding: 32px;
+    }}
+    main {{
+      max-width: 1120px;
+      margin: 0 auto;
+    }}
+    h1 {{
+      margin: 0 0 8px;
+      font-size: 2.2rem;
+      line-height: 1.1;
+    }}
+    .meta {{
+      margin: 0 0 24px;
+      color: #555555;
+    }}
+    .image-card {{
+      border: 1px solid #dddddd;
+      border-radius: 8px;
+      background: #ffffff;
+      margin: 0 0 18px;
+      padding: 18px;
+    }}
+    h2 {{
+      margin: 0 0 12px;
+      font-size: 1.35rem;
+      overflow-wrap: anywhere;
+    }}
+    dl {{
+      margin: 0;
+    }}
+    .image-meta {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 0 0 16px;
+    }}
+    .image-meta div {{
+      border: 1px solid #eeeeee;
+      border-radius: 8px;
+      padding: 12px;
+    }}
+    dt {{
+      color: #666666;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin: 0 0 4px;
+      text-transform: uppercase;
+    }}
+    dd {{
+      margin: 0;
+      overflow-wrap: anywhere;
+    }}
+    .palette {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+    }}
+    .swatch {{
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 8px;
+      min-height: 190px;
+      padding: 14px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }}
+    .hex {{
+      font-size: 1.2rem;
+      font-weight: 700;
+    }}
+    .details {{
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{safe_title}</h1>
+    <p class="meta">{image_count} audited images. {settings}</p>
+{cards}
+  </main>
+</body>
+</html>
+"""
+
+
+def _render_batch_image_card(
+    summary: dict[str, Any], *, precision: int | None = None
+) -> str:
+    source = escape(str(summary["source"]))
+    source_path = escape(str(summary.get("source_path", summary["source"])))
+    width = summary["size"]["width"]
+    height = summary["size"]["height"]
+    dominant = escape(_batch_html_dominant(summary, precision))
+    swatches = "\n".join(
+        _render_batch_swatch(entry, precision=precision) for entry in summary["palette"]
+    )
+    return f"""    <section class="image-card">
+      <h2>{source}</h2>
+      <dl class="image-meta">
+        <div>
+          <dt>Source path</dt>
+          <dd>{source_path}</dd>
+        </div>
+        <div>
+          <dt>Image size</dt>
+          <dd>{width} x {height}px</dd>
+        </div>
+        <div>
+          <dt>Dominant colors</dt>
+          <dd>{dominant}</dd>
+        </div>
+      </dl>
+      <section class="palette" aria-label="Palette for {source}">
+{swatches}
+      </section>
+    </section>"""
+
+
+def _batch_html_dominant(summary: dict[str, Any], precision: int | None) -> str:
+    return ", ".join(
+        f"{entry['hex']} {_format_decimal(entry['percent'], precision)}%"
+        for entry in summary["palette"][:3]
+    )
+
+
+def _render_batch_swatch(entry: dict[str, Any], *, precision: int | None = None) -> str:
+    hex_color = escape(str(entry["hex"]))
+    label = escape(str(entry["label"]))
+    rgb = escape(", ".join(str(value) for value in entry["rgb"]))
+    style = escape(f"background: {entry['hex']}; color: {entry['best_text_color']}")
+    name_line = ""
+    if "name" in entry:
+        name_line = f"""          <dt>Common name</dt>
+          <dd>{escape(str(entry["name"]))}</dd>
+"""
+    return f"""        <article class="swatch" style="{style}">
+          <div>
+            <div class="hex">{hex_color}</div>
+            <div>{label}</div>
+          </div>
+          <dl class="details">
+{name_line}\
+            <dt>RGB</dt>
+            <dd>{rgb}</dd>
+            <dt>Share</dt>
+            <dd>{_format_decimal(entry["percent"], precision)}%</dd>
+            <dt>Contrast guidance</dt>
+            <dd>{escape(_batch_guidance(entry, precision))}</dd>
+            <dt>Relative luminance</dt>
+            <dd>{_format_decimal(entry["luminance"], precision)}</dd>
+          </dl>
+        </article>"""
+
+
+def write_batch_html_report(
+    summaries: list[dict[str, Any]],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story Batch Review",
+    precision: int | None = None,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_batch_html_report(
+            summaries,
+            title=title,
+            precision=precision,
+        ),
+        encoding="utf-8",
+    )
 
 
 def write_html_thumbnail(
