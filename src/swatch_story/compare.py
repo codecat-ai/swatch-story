@@ -60,6 +60,43 @@ def compare_summaries(
     }
 
 
+def baseline_report(
+    baseline_summary: dict[str, Any],
+    candidate_summaries: list[dict[str, Any]],
+    *,
+    title: str = "Baseline Drift Review",
+    min_delta_percent: float = 0.0,
+) -> dict[str, Any]:
+    candidates = []
+    for index, candidate_summary in enumerate(candidate_summaries):
+        comparison = compare_summaries(
+            baseline_summary,
+            candidate_summary,
+            min_delta_percent=min_delta_percent,
+        )
+        candidates.append(
+            {
+                "rank": 0,
+                "input_index": index,
+                "source": comparison["after"],
+                "drift_score": comparison["drift_score"],
+                "shared": comparison["shared"],
+                "added": comparison["added"],
+                "removed": comparison["removed"],
+                "changed": comparison["changed"],
+            }
+        )
+    for rank, candidate in enumerate(_ranked_baseline_candidates(candidates), start=1):
+        candidate["rank"] = rank
+    return {
+        "schema": "swatch-story.baseline",
+        "version": 1,
+        "title": title,
+        "baseline": _comparison_side(baseline_summary),
+        "candidates": candidates,
+    }
+
+
 def _comparison_side(summary: dict[str, Any]) -> dict[str, Any]:
     palette = summary["palette"]
     return {
@@ -70,6 +107,108 @@ def _comparison_side(summary: dict[str, Any]) -> dict[str, Any]:
         "settings": summary.get("settings", {}),
         "palette": palette,
     }
+
+
+def render_baseline_markdown_report(report: dict[str, Any]) -> str:
+    baseline = report["baseline"]
+    ranked = _ranked_baseline_candidates(report["candidates"])
+    lines = [
+        f"# {markdown_escape(str(report['title']))}",
+        "",
+        f"Baseline: `{markdown_escape(str(baseline['source_path']))}`  ",
+        f"Candidates: {len(report['candidates'])}",
+        "",
+        "| Rank | Candidate | Source path | Drift | Shared | Added | Removed |",
+        "| ---: | --- | --- | ---: | --- | --- | --- |",
+    ]
+    for candidate in ranked:
+        source = candidate["source"]
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(candidate["rank"]),
+                    markdown_escape(str(source["source"])),
+                    markdown_escape(str(source["source_path"])),
+                    f"{candidate['drift_score']}%",
+                    _format_markdown_color_list(candidate["shared"]),
+                    _format_markdown_color_list(candidate["added"]),
+                    _format_markdown_color_list(candidate["removed"]),
+                ]
+            )
+            + " |"
+        )
+    for candidate in ranked:
+        source = candidate["source"]
+        lines.extend(
+            [
+                "",
+                f"## {candidate['rank']}. {markdown_escape(str(source['source']))}",
+                "",
+                f"Source path: `{markdown_escape(str(source['source_path']))}`  ",
+                f"Drift score: {candidate['drift_score']}%  ",
+                f"Shared colors: {_format_markdown_color_list(candidate['shared'])}  ",
+                f"Added colors: {_format_markdown_color_list(candidate['added'])}  ",
+                (
+                    "Removed colors: "
+                    f"{_format_markdown_color_list(candidate['removed'])}  "
+                ),
+                (
+                    "Changed colors: "
+                    f"{_format_markdown_changed_color_list(candidate['changed'])}"
+                ),
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
+def write_baseline_markdown_report(
+    report: dict[str, Any], output_path: str | Path
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_baseline_markdown_report(report), encoding="utf-8")
+
+
+def render_baseline_text_report(report: dict[str, Any]) -> str:
+    baseline = report["baseline"]
+    lines = [
+        _single_line(report["title"]),
+        f"Baseline: {_single_line(baseline['source_path'])}",
+    ]
+    for candidate in _ranked_baseline_candidates(report["candidates"]):
+        source = candidate["source"]
+        lines.append(
+            f"{candidate['rank']}. {_single_line(source['source'])} | "
+            f"drift {candidate['drift_score']}% | "
+            f"shared {_format_text_color_list(candidate['shared'])} | "
+            f"added {_format_text_color_list(candidate['added'])} | "
+            f"removed {_format_text_color_list(candidate['removed'])} | "
+            f"changed {_format_text_changed_color_list(candidate['changed'])}"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def write_baseline_text_report(report: dict[str, Any], output_path: str | Path) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_baseline_text_report(report), encoding="utf-8")
+
+
+def write_baseline_json(report: dict[str, Any], output_path: str | Path) -> None:
+    write_json_report(report, output_path)
+
+
+def _ranked_baseline_candidates(
+    candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    return sorted(
+        candidates,
+        key=lambda candidate: (
+            -float(candidate["drift_score"]),
+            int(candidate.get("input_index", 0)),
+        ),
+    )
 
 
 def _changed_color_deltas(

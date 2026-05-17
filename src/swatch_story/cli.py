@@ -12,8 +12,12 @@ from typing import Any
 from urllib.parse import urlparse
 
 from swatch_story.compare import (
+    baseline_report,
     compare_summaries,
     render_compare_text,
+    write_baseline_json,
+    write_baseline_markdown_report,
+    write_baseline_text_report,
     write_compare_csv_report,
     write_compare_html_report,
     write_compare_json,
@@ -90,6 +94,7 @@ BATCH_PRESET_KEYS = SHARED_PRESET_KEYS | {
     "precision",
     "title",
 }
+BASELINE_PRESET_KEYS = COMPARE_PRESET_KEYS
 PRESET_FLAG_BY_KEY = {key: f"--{key.replace('_', '-')}" for key in PRESET_KEYS}
 
 
@@ -334,6 +339,49 @@ def build_batch_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_baseline_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="swatch-story baseline",
+        description="Compare one baseline image against candidate image palettes.",
+    )
+    parser.add_argument("baseline_image", help="Local baseline image path")
+    parser.add_argument("candidate_images", nargs="+", help="Local candidate paths")
+    add_palette_options(parser)
+    parser.add_argument("--json", dest="json_path", help="Write JSON report to PATH")
+    parser.add_argument(
+        "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
+    )
+    parser.add_argument(
+        "--text", dest="text_path", help="Write plain-text report to PATH"
+    )
+    parser.add_argument(
+        "--min-delta-percent",
+        type=min_delta_percent_value,
+        default=0.0,
+        metavar="N",
+        help=(
+            "Only include shared-color delta detail rows when the absolute "
+            "percentage change is at least N. Default: 0.0."
+        ),
+    )
+    parser.add_argument(
+        "--title",
+        default="Baseline Drift Review",
+        help="Title for JSON, Markdown, and text baseline reports",
+    )
+    parser.add_argument(
+        "--precision",
+        type=precision_value,
+        default=None,
+        metavar="N",
+        help=(
+            "Decimal places for report percentages and luminance values, 0-6. "
+            "Default preserves existing output."
+        ),
+    )
+    return parser
+
+
 def add_palette_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--preset",
@@ -402,6 +450,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return gallery_main(argv[1:])
     if argv[:1] == ["batch"]:
         return batch_main(argv[1:])
+    if argv[:1] == ["baseline"]:
+        return baseline_main(argv[1:])
 
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -711,6 +761,69 @@ def batch_main(argv: Sequence[str]) -> int:
     return 0
 
 
+def baseline_main(argv: Sequence[str]) -> int:
+    parser = build_baseline_parser()
+    args = parser.parse_args(argv)
+    apply_preset(parser, args, argv, BASELINE_PRESET_KEYS)
+    if not args.json_path and not args.markdown_path and not args.text_path:
+        parser.error("at least one of --json, --markdown, or --text is required")
+
+    try:
+        baseline_summary = summarize_image(
+            Path(args.baseline_image),
+            colors=args.colors,
+            sample_step=args.sample_step,
+            sample_limit=args.sample_limit,
+            include_color_names=args.names,
+            ignore_color=args.ignore_color,
+            matte=args.matte,
+            cluster_distance=args.cluster_distance,
+            sort=args.sort,
+        )
+        candidate_summaries = [
+            summarize_image(
+                Path(image),
+                colors=args.colors,
+                sample_step=args.sample_step,
+                sample_limit=args.sample_limit,
+                include_color_names=args.names,
+                ignore_color=args.ignore_color,
+                matte=args.matte,
+                cluster_distance=args.cluster_distance,
+                sort=args.sort,
+            )
+            for image in args.candidate_images
+        ]
+    except PaletteError as exc:
+        print(f"swatch-story baseline: {exc}", file=sys.stderr)
+        return 2
+
+    report = baseline_report(
+        baseline_summary,
+        candidate_summaries,
+        title=args.title,
+        min_delta_percent=args.min_delta_percent,
+    )
+    output_report = baseline_report_with_precision(report, args.precision)
+    written = []
+    if args.json_path:
+        write_baseline_json(output_report, args.json_path)
+        written.append(Path(args.json_path))
+    if args.markdown_path:
+        write_baseline_markdown_report(output_report, args.markdown_path)
+        written.append(Path(args.markdown_path))
+    if args.text_path:
+        write_baseline_text_report(output_report, args.text_path)
+        written.append(Path(args.text_path))
+
+    destinations = ", ".join(str(path) for path in written)
+    print(
+        f"Wrote baseline report for {len(candidate_summaries)} candidates to "
+        f"{destinations}"
+    )
+    return 0
+
+
 def compare_main(argv: Sequence[str]) -> int:
     parser = build_compare_parser()
     args = parser.parse_args(argv)
@@ -765,6 +878,24 @@ def compare_main(argv: Sequence[str]) -> int:
         write_compare_text_report(output_report, args.text_path, title=args.title)
     print(render_compare_text(output_report), end="")
     return 0
+
+
+def baseline_report_with_precision(
+    report: dict[str, Any], precision: int | None
+) -> dict[str, Any]:
+    if precision is None:
+        return report
+    rounded_report = deepcopy(report)
+    for entry in rounded_report["baseline"]["palette"]:
+        round_palette_entry(entry, precision)
+    for candidate in rounded_report["candidates"]:
+        for entry in candidate["source"]["palette"]:
+            round_palette_entry(entry, precision)
+        for entry in candidate["changed"]:
+            for key in ("before_percent", "after_percent", "delta_percent"):
+                entry[key] = round(float(entry[key]), precision)
+        candidate["drift_score"] = round(float(candidate["drift_score"]), precision)
+    return rounded_report
 
 
 def compare_report_with_precision(

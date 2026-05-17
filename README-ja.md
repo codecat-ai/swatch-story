@@ -32,9 +32,10 @@
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
 - `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
-- `--preset PATH` により、メイン画像、`compare`、`batch` コマンドで再利用できるローカル JSON 抽出プリセットを読み込み、明示した CLI フラグでプリセット値を上書きできます。
+- `--preset PATH` により、メイン画像、`compare`、`baseline`、`batch` コマンドで再利用できるローカル JSON 抽出プリセットを読み込み、明示した CLI フラグでプリセット値を上書きできます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
+- ベースラインドリフトレビューでは、1 枚の参照画像を複数の候補画像と比較し、ドリフトスコアで順位付けし、決定的な JSON、Markdown、プレーンテキストレポートを書き出せます。
 - 2 枚以上のローカル画像監査を、画像ごとのセクション/カード、主要色、パレット行、コントラスト指針、エスケープ済みユーザー由来値、共通抽出設定を含む決定的な Markdown または単体 HTML のチームレビューレポートにまとめられます。
 - ソースチェックアウト内で、小さな決定的 PNG、安定した授業テーマタグ、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
 
@@ -68,6 +69,12 @@ gallery コマンドは小さな決定的 PNG ファイルと `demo-gallery/READ
 
 ```bash
 swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-review.md --html team-review.html
+```
+
+参照パレットに対して候補画像を順位付けします。
+
+```bash
+swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt
 ```
 
 ## 例
@@ -202,6 +209,14 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 
 比較 CSV レポートは、スプレッドシートでパレットドリフトを確認するための決定的な UTF-8 表です。比較 HTML レポートは、各画像にコンパクトな CSS-only 横並びパレットプレビューを含む、ブラウザーで確認できる単体のローカルファイルです。比較 Markdown レポートは、メモ、Issue コメント、デザインドキュメントに向いたポータブルな表です。比較プレーンテキストレポートは、メール、チケット、レビューログ向けの決定的な UTF-8 ドリフトシートです。これらのレポートは、安全に表現された前後ソース名とパス、各側の主要色、共有色、追加色、削除色、フィルター済みの色変化詳細、空の変更リストに対する明確な `None` 状態、ドリフトスコアを含みます。同じ `compare` コマンドで `--json`、`--csv`、`--html`、`--markdown`、`--text` を同時に指定できます。
 
+1 枚のベースライン画像を複数の候補画像と比較し、ドリフトで順位付けします。
+
+```bash
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt
+```
+
+`baseline` コマンドには、1 枚のベースライン画像、少なくとも 1 枚の候補画像、そして `--json PATH`、`--markdown PATH`、`--text PATH` の少なくとも 1 つが必要です。3 つの出力は同時に指定できます。各候補に `compare` と同じドリフトロジックを使い、JSON では候補を入力順に保ちながら順位とドリフトスコアを含め、Markdown/テキストの要約はドリフトスコア降順で並べます。ベースラインレポートには、ベースラインのソースメタデータ、候補のソースメタデータ、共有色、追加色、削除色、フィルター済みの色変化詳細、エスケープ済みのユーザー由来タイトル、名前、パスが含まれます。
+
 複数のローカル画像監査を 1 つのチームレビューレポートにまとめます。
 
 ```bash
@@ -210,7 +225,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 `batch` コマンドには少なくとも 2 つの画像パスと、`--markdown PATH` または `--html PATH` の少なくとも一方が必要です。両方の出力を同時に指定できます。すべての画像に同じ決定的なパレット抽出設定を適用し、各ソース画像についてソース名/パス、画像サイズ、主要色、パレット行/カード、黒/白文字のコントラスト指針を含む Markdown セクションまたは HTML カードを書き出します。ユーザー由来のタイトル、ファイル名、パス、ラベル、名前はエスケープされ、ファイルは決定的な UTF-8 として書き込まれます。
 
-プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。
+プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` と `baseline` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
 
@@ -422,11 +437,13 @@ Drift score: 66.67%
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
 - `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
 - `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、WCAG 監査、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
-- `--preset PATH`: メイン画像、`compare`、`batch` コマンドの実行前に、再利用できる既定値をローカル JSON プリセットから読み込みます。明示した CLI フラグはプリセット値を上書きします。プリセットには `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` を含められます。モードで使わないキーは適用されません。
+- `--preset PATH`: メイン画像、`compare`、`baseline`、`batch` コマンドの実行前に、再利用できる既定値をローカル JSON プリセットから読み込みます。明示した CLI フラグはプリセット値を上書きします。プリセットには `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` を含められます。モードで使わないキーは適用されません。
 - `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
+
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。これらの出力は同時に指定できます。
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
 
@@ -446,7 +463,7 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、単一画像/比較/batch レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、ユーザー由来レポート値のエスケープ、CLI ファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、単一画像/比較/ベースライン/batch レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、ユーザー由来レポート値のエスケープ、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
@@ -454,7 +471,7 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- 参照画像を候補画像セット全体と比較する、任意のベースライン対 batch ドリフトレビュー。
+- 並べ替え可能な候補行とパレットプレビューを備えた任意の HTML ベースラインドリフトダッシュボード。
 - レビューセッション前にチームプリセットファイルを一覧表示して検証する任意のプリセット検出コマンド。
 
 ## コントリビュート
