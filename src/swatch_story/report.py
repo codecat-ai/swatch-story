@@ -337,6 +337,104 @@ def write_markdown_report(
     )
 
 
+def render_wcag_audit_report(
+    summary: dict[str, Any],
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> str:
+    source = markdown_escape(str(summary["source"]))
+    source_path = markdown_escape(str(summary.get("source_path", summary["source"])))
+    width = summary["size"]["width"]
+    height = summary["size"]["height"]
+    settings = markdown_escape(_settings_summary(summary))
+    lines = [
+        f"# {markdown_escape(title)} WCAG Audit",
+        "",
+        f"Source: `{source}`  ",
+        f"Source path: `{source_path}`  ",
+        f"Image size: {width} x {height} px  ",
+        f"Settings: {settings.removeprefix('Settings: ')}",
+        "",
+        (
+            "Thresholds: normal AA >= 4.5, large AA >= 3.0, "
+            "normal AAA >= 7.0, large AAA >= 4.5."
+        ),
+        "",
+        (
+            "| Rank | Color | Label | Preferred text | Black text readiness | "
+            "White text readiness | Recommendation |"
+        ),
+        "| ---: | --- | --- | --- | --- | --- | --- |",
+    ]
+    for entry in summary["palette"]:
+        label = _wcag_audit_label(entry)
+        preferred = str(entry["best_text_color"])
+        preferred_ratio = float(entry[f"contrast_with_{preferred}"])
+        recommendation_passes = _wcag_readiness(preferred_ratio)
+        if recommendation_passes == "No WCAG text pass":
+            recommendation = "No black or white text reaches WCAG thresholds."
+        else:
+            recommendation = f"Use {preferred} text; passes {recommendation_passes}."
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(entry["rank"]),
+                    f"`{markdown_escape(str(entry['hex']))}`",
+                    markdown_escape(label),
+                    markdown_escape(preferred),
+                    markdown_escape(
+                        _wcag_readiness(float(entry["contrast_with_black"]))
+                    ),
+                    markdown_escape(
+                        _wcag_readiness(float(entry["contrast_with_white"]))
+                    ),
+                    markdown_escape(recommendation),
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n\n"
+
+
+def _wcag_audit_label(entry: dict[str, Any]) -> str:
+    label = _single_line(entry["label"])
+    if "name" in entry:
+        label = f"{label}, {_single_line(entry['name'])}"
+    return label
+
+
+def _wcag_readiness(ratio: float) -> str:
+    passes = []
+    if ratio >= 4.5:
+        passes.append("AA normal")
+    if ratio >= 3.0:
+        passes.append("AA large")
+    if ratio >= 7.0:
+        passes.append("AAA normal")
+    if ratio >= 4.5:
+        passes.append("AAA large")
+    if not passes:
+        return "No WCAG text pass"
+    return ", ".join(passes)
+
+
+def write_wcag_audit_report(
+    summary: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Swatch Story",
+    precision: int | None = None,
+) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_wcag_audit_report(summary, title=title, precision=precision),
+        encoding="utf-8",
+    )
+
+
 def render_text_report(
     summary: dict[str, Any],
     *,

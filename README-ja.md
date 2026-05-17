@@ -3,7 +3,7 @@
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
 
-`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、デザイントークン JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、貼り付けやすいプレーンテキスト、単体 SVG スウォッチシート、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
+`swatch-story` は、画像からコンパクトな色のストーリーを抽出し、機械可読な JSON、デザイントークン JSON、UTF-8 CSV、CSS カスタムプロパティ、ポータブルな Markdown、WCAG 監査 Markdown、貼り付けやすいプレーンテキスト、単体 SVG スウォッチシート、GIMP `.gpl` パレット、Adobe Swatch Exchange `.ase` パレット、単体で開ける HTML レポートを書き出すローカル優先の画像ユーティリティです。
 
 ## 課題と動機
 
@@ -17,6 +17,7 @@
 - UTF-8 CSV 出力には、表計算ソフトでの並べ替え、絞り込み、軽量なデータ処理に使いやすい安定した列が含まれます。
 - CSS カスタムプロパティ出力には、HEX、RGB の組、黒/白のコントラスト比、読みやすい文字色の変数が含まれます。
 - ポータブルな Markdown レポートには、パレットのメタデータとメモやドキュメント向けの表が含まれます。
+- WCAG 監査 Markdown には、通常文字と大きな文字の AA/AAA しきい値、黒/白文字の準備度、推奨文字色、スウォッチごとの簡潔な推奨事項が含まれます。
 - プレーンテキストのパレットシートには、元ファイルのメタデータ、抽出設定、メール、チケット、授業メモに貼り付けやすいスウォッチごとの 1 行が含まれます。
 - 単体 SVG スウォッチシートには、元ファイルのメタデータ、抽出設定、色ブロック、HEX 値、任意の名前、割合、輝度、黒/白のコントラスト比、ラベル、読みやすい文字色の指針が含まれ、ドキュメントやスライドに使いやすくなっています。
 - デザインツールと連携しやすい、決定的な GIMP `.gpl` パレットを書き出します。
@@ -27,7 +28,7 @@
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
 - `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
-- `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
+- `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
@@ -46,10 +47,10 @@ python -m pip install -e ".[dev]"
 ## クイックスタート
 
 ```bash
-swatch-story image.png --colors 6 --json story.json --tokens story.tokens.json --csv story.csv --css story.css --html story.html --markdown story.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
+swatch-story image.png --colors 6 --json story.json --tokens story.tokens.json --csv story.csv --css story.css --html story.html --markdown story.md --wcag-audit story-audit.md --text story.txt --svg story.svg --gpl story.gpl --ase story.ase --title "Launch Palette"
 ```
 
-このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.tokens.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story.txt`、`story.svg`、`story.gpl`、`story.ase` を書き出します。
+このコマンドはターミナル要約を表示し、指定された場合は `story.json`、`story.tokens.json`、`story.csv`、`story.css`、`story.html`、`story.md`、`story-audit.md`、`story.txt`、`story.svg`、`story.gpl`、`story.ase` を書き出します。
 
 同じソースチェックアウトからローカル教材用素材を生成します。
 
@@ -171,6 +172,12 @@ swatch-story poster.png --colors 5 --css poster-colors.css
 
 ```bash
 swatch-story poster.png --colors 5 --markdown poster-colors.md --title "Poster Palette"
+```
+
+黒/白文字との WCAG 読みやすさ監査を作成します。
+
+```bash
+swatch-story poster.png --colors 5 --wcag-audit poster-audit.md --title "Poster Palette"
 ```
 
 メール、チケット、授業メモに貼り付けやすいプレーンテキストのパレットシートを作成します。
@@ -345,6 +352,7 @@ Drift score: 66.67%
 - `--css PATH`: CSS カスタムプロパティを書き出します。
 - `--html PATH`: 単体 HTML レポートを書き出します。
 - `--markdown PATH`: ポータブルな Markdown レポートを書き出します。
+- `--wcag-audit PATH`: 決定的な UTF-8 Markdown 監査を書き出します。元データ、抽出設定、黒/白文字に対する通常/大きな文字の WCAG AA/AAA 準備度、推奨文字色、スウォッチごとの推奨事項を含みます。
 - `--text PATH`: UTF-8 プレーンテキストのパレットシートを書き出します。タイトル、元ファイル名、画像サイズ、抽出設定、各スウォッチの順位、HEX、RGB の組、割合、ラベル、黒/白のコントラスト比、最適な文字色、任意の名前ヒントを含みます。
 - `--svg PATH`: 決定的な UTF-8 単体 SVG スウォッチシートを書き出します。タイトル、元ファイル名、画像サイズ、抽出設定、各スウォッチ行の色矩形、HEX、任意の名前ヒント、割合、輝度、黒/白のコントラスト比、ラベル、読みやすい文字色を含みます。
 - `--gpl PATH`: 決定的な GIMP `.gpl` パレットを書き出します。
@@ -354,9 +362,9 @@ Drift score: 66.67%
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
 - `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
-- `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
-- `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
-- `--title TEXT`: デザイントークン JSON、HTML、Markdown、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
+- `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
+- `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、WCAG 監査、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
+- `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
@@ -386,7 +394,7 @@ pytest -q
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
 - チームやプロジェクト間で再利用できる抽出設定を保存するための、任意のパレットプリセットファイル。
-- テキスト/背景ペアリングの利用可否でスウォッチをグループ化する、任意の WCAG 向けパレット監査サマリー。
+- 複数画像の監査結果を 1 つのチーム向け Markdown または HTML レビューにまとめる、任意のバッチレポート。
 
 ## コントリビュート
 
