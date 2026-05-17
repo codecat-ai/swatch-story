@@ -1,5 +1,8 @@
 from swatch_story.compare import (
+    baseline_report,
     compare_summaries,
+    render_baseline_markdown_report,
+    render_baseline_text_report,
     render_compare_csv_report,
     render_compare_html_report,
     render_compare_markdown_report,
@@ -314,3 +317,92 @@ def test_render_compare_text_report_sanitizes_single_line_values() -> None:
     assert "After source name: after final two.png\n" in text
     assert "Added colors: None\n" in text
     assert "Removed colors: None\n" in text
+
+
+def test_baseline_report_compares_baseline_to_each_candidate_and_ranks_drift() -> None:
+    baseline = summary("baseline.png", ["#111111", "#222222", "#333333"])
+    first = summary("first.png", ["#111111", "#222222", "#333333"])
+    second = summary("second.png", ["#222222", "#444444", "#555555"])
+
+    report = baseline_report(
+        baseline,
+        [first, second],
+        title="Baseline Drift",
+    )
+
+    assert report["schema"] == "swatch-story.baseline"
+    assert report["version"] == 1
+    assert report["title"] == "Baseline Drift"
+    assert report["baseline"]["source"] == "baseline.png"
+    assert [candidate["source"]["source"] for candidate in report["candidates"]] == [
+        "first.png",
+        "second.png",
+    ]
+    assert [candidate["drift_score"] for candidate in report["candidates"]] == [
+        0.0,
+        80.0,
+    ]
+    assert [candidate["rank"] for candidate in report["candidates"]] == [2, 1]
+    assert report["candidates"][1]["shared"] == ["#222222"]
+    assert report["candidates"][1]["added"] == ["#444444", "#555555"]
+    assert report["candidates"][1]["removed"] == ["#111111", "#333333"]
+    assert report["candidates"][1]["changed"] == [
+        {
+            "hex": "#222222",
+            "before_percent": 50.0,
+            "after_percent": 50.0,
+            "delta_percent": 0.0,
+        }
+    ]
+
+
+def test_render_baseline_markdown_report_ranks_and_escapes_candidates() -> None:
+    report = baseline_report(
+        summary("base | ref.png", ["#111111", "#222222", "#333333"]),
+        [
+            summary("steady.png", ["#111111", "#222222", "#333333"]),
+            summary("changed <final>.png", ["#222222", "#444444", "#555555"]),
+        ],
+        title="Baseline <Review>",
+    )
+
+    markdown = render_baseline_markdown_report(report)
+
+    assert markdown.startswith("# Baseline &lt;Review&gt;\n\n")
+    assert "Baseline: `fixtures/base \\| ref.png`  \n" in markdown
+    assert (
+        "| 1 | changed &lt;final&gt;.png | fixtures/changed &lt;final&gt;.png | "
+        "80.0% | `#222222` | `#444444`, `#555555` | "
+        "`#111111`, `#333333` |\n"
+    ) in markdown
+    assert (
+        "| 2 | steady.png | fixtures/steady.png | 0.0% | "
+        "`#111111`, `#222222`, `#333333` | None | None |\n"
+    ) in markdown
+    assert "## 1. changed &lt;final&gt;.png" in markdown
+    assert "Changed colors: `#222222 (50.0% to 50.0%, 0.0%)`" in markdown
+    assert "<Review>" not in markdown
+
+
+def test_render_baseline_text_report_is_compact_ranked_and_single_line() -> None:
+    report = baseline_report(
+        summary("base\nref.png", ["#111111", "#222222"]),
+        [
+            summary("stable.png", ["#111111", "#222222"]),
+            summary("candidate\tfinal.png", ["#333333", "#444444"]),
+        ],
+        title=" Baseline\nReview ",
+    )
+
+    text = render_baseline_text_report(report)
+
+    assert text == (
+        "Baseline Review\n"
+        "Baseline: fixtures/base ref.png\n"
+        "1. candidate final.png | drift 100.0% | shared None | "
+        "added #333333, #444444 | removed #111111, #222222 | changed None\n"
+        "2. stable.png | drift 0.0% | shared #111111, #222222 | "
+        "added None | removed None | "
+        "changed #111111 (50.0% to 50.0%, 0.0%), "
+        "#222222 (50.0% to 50.0%, 0.0%)\n"
+    )

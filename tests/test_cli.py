@@ -564,6 +564,88 @@ def test_cli_batch_reads_preset_and_cli_colors_override_wins(
     )
 
 
+def test_cli_baseline_requires_an_output_path(tmp_path: Path, capsys) -> None:
+    baseline_path = tmp_path / "baseline.png"
+    candidate_path = tmp_path / "candidate.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(baseline_path)
+    Image.new("RGB", (1, 1), (0, 0, 255)).save(candidate_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["baseline", str(baseline_path), str(candidate_path)])
+
+    assert exc_info.value.code == 2
+    assert (
+        "at least one of --json, --markdown, or --text is required"
+        in capsys.readouterr().err
+    )
+
+
+def test_cli_baseline_writes_json_markdown_and_text_reports(
+    tmp_path: Path, capsys
+) -> None:
+    baseline_path = tmp_path / "baseline <ref>.png"
+    baseline = Image.new("RGB", (3, 1))
+    baseline.putdata([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    baseline.save(baseline_path)
+    stable_path = tmp_path / "stable.png"
+    stable = Image.new("RGB", (3, 1))
+    stable.putdata([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    stable.save(stable_path)
+    drifted_path = tmp_path / "drifted & final.png"
+    drifted = Image.new("RGB", (3, 1))
+    drifted.putdata([(0, 255, 0), (17, 34, 51), (68, 85, 102)])
+    drifted.save(drifted_path)
+    json_path = tmp_path / "reports" / "baseline.json"
+    markdown_path = tmp_path / "reports" / "baseline.md"
+    text_path = tmp_path / "reports" / "baseline.txt"
+
+    exit_code = main(
+        [
+            "baseline",
+            str(baseline_path),
+            str(stable_path),
+            str(drifted_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--precision",
+            "1",
+            "--title",
+            "Baseline <Review>",
+            "--json",
+            str(json_path),
+            "--markdown",
+            str(markdown_path),
+            "--text",
+            str(text_path),
+        ]
+    )
+
+    assert exit_code == 0
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    assert data["schema"] == "swatch-story.baseline"
+    assert data["title"] == "Baseline <Review>"
+    assert data["baseline"]["source"] == "baseline <ref>.png"
+    assert [candidate["source"]["source"] for candidate in data["candidates"]] == [
+        "stable.png",
+        "drifted & final.png",
+    ]
+    assert [candidate["rank"] for candidate in data["candidates"]] == [2, 1]
+    assert [candidate["drift_score"] for candidate in data["candidates"]] == [0.0, 80.0]
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# Baseline &lt;Review&gt;\n")
+    assert "baseline &lt;ref&gt;.png" in markdown
+    assert "| 1 | drifted &amp; final.png |" in markdown
+    text = text_path.read_text(encoding="utf-8")
+    assert text.startswith("Baseline <Review>\n")
+    assert "1. drifted & final.png | drift 80.0%" in text
+    assert (
+        f"Wrote baseline report for 2 candidates to {json_path}, {markdown_path}, "
+        f"{text_path}" in capsys.readouterr().out
+    )
+
+
 def _ase_strings(data: bytes) -> list[str]:
     assert data[:4] == b"ASEF"
     block_count = struct.unpack_from(">I", data, 8)[0]

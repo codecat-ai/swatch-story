@@ -34,6 +34,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command, including `--tokens` keys.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
+- Baseline drift reviews that compare one reference image against multiple candidates, rank candidates by drift score, and write deterministic JSON, Markdown, and plain-text reports.
 - Batch team-review reports that combine two or more local image audits into one deterministic Markdown and/or standalone HTML file with one section/card per image, dominant colors, palette rows, contrast guidance, escaped user-derived values, and shared extraction settings.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
@@ -67,6 +68,12 @@ Create a team-review report for several local images:
 
 ```bash
 swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-review.md --html team-review.html
+```
+
+Rank candidate images against a reference palette:
+
+```bash
+swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt
 ```
 
 ## Examples
@@ -207,6 +214,14 @@ The compare command prints a concise terminal report with the before and after p
 
 The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review with compact CSS-only side-by-side palette preview strips for each image. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, filtered changed-color delta details, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
 
+Compare one baseline image against several candidates and rank drift:
+
+```bash
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt
+```
+
+The baseline command requires one baseline image, at least one candidate image, and at least one of `--json PATH`, `--markdown PATH`, or `--text PATH`; all three outputs may be requested together. It reuses the compare drift logic for every candidate, keeps JSON candidates in input order with a rank and drift score, and sorts Markdown/text summaries by drift score descending. Baseline reports include baseline source metadata, candidate source metadata, shared colors, added colors, removed colors, filtered changed-color details, and escaped user-derived titles, names, and paths.
+
 Combine several local image audits into one team-review report:
 
 ```bash
@@ -215,7 +230,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
 
-Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` uses shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written.
+Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` and `baseline` use shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
@@ -421,11 +436,13 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
 - `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
 - `--label-prefix PREFIX`: replace default palette labels with `PREFIX-1`, `PREFIX-2`, and so on for the main image command. `PREFIX` must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. For example, `--label-prefix brand` writes labels such as `brand-1` into JSON, design-token JSON keys, CSV, CSS custom property names, Markdown, WCAG audit, text, HTML, SVG, GIMP `.gpl`, Adobe `.ase`, and terminal output. Compare and gallery commands do not use this option.
-- `--preset PATH`: read reusable defaults from a local JSON preset before running the main image, `compare`, or `batch` command. Explicit CLI flags override preset values. The preset may contain `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`; mode-specific unsupported keys are ignored rather than applied.
+- `--preset PATH`: read reusable defaults from a local JSON preset before running the main image, `compare`, `baseline`, or `batch` command. Explicit CLI flags override preset values. The preset may contain `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`; mode-specific unsupported keys are ignored rather than applied.
 - `--title TEXT`: title for design-token JSON, HTML, Markdown, WCAG audit, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
+
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. These outputs can be requested together.
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
 
@@ -445,7 +462,7 @@ python -m build
 
 ## Testing
 
-The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, single-image, compare, and batch report rendering, design-token JSON output, gallery manifest content, escaping of user-derived report values, and CLI file output.
+The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, single-image, compare, baseline, and batch report rendering, design-token JSON output, gallery manifest content, escaping of user-derived report values, and CLI file output.
 
 ```bash
 pytest -q
@@ -453,7 +470,7 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional baseline-vs-batch drift review that compares a reference image against a whole set of candidate images.
+- Optional HTML baseline drift dashboard with sortable candidate rows and palette previews.
 - Optional preset discovery command that lists and validates team preset files before a review session.
 
 ## Contributing
