@@ -35,6 +35,7 @@ from swatch_story.report import (
     write_svg_report,
     write_text_report,
     write_tokens_report,
+    write_wcag_audit_report,
 )
 
 LABEL_PREFIX_PATTERN = re.compile(r"[a-z][a-z0-9-]*\Z")
@@ -112,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
+    )
+    parser.add_argument(
+        "--wcag-audit",
+        dest="wcag_audit_path",
+        help="Write WCAG-oriented Markdown audit report to PATH",
     )
     parser.add_argument(
         "--text", dest="text_path", help="Write plain-text report to PATH"
@@ -320,6 +326,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_markdown_report(
             summary,
             args.markdown_path,
+            title=args.title,
+            precision=args.precision,
+        )
+    if args.wcag_audit_path:
+        write_wcag_audit_report(
+            summary,
+            args.wcag_audit_path,
             title=args.title,
             precision=args.precision,
         )

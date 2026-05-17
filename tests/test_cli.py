@@ -38,6 +38,38 @@ def test_cli_writes_json_html_and_prints_summary(tmp_path: Path, capsys) -> None
     assert "#ff0000" in capsys.readouterr().out
 
 
+def test_cli_writes_wcag_audit_report(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    image = Image.new("RGB", (2, 1))
+    image.putdata([(17, 34, 51), (238, 238, 238)])
+    image.save(image_path)
+    audit_path = tmp_path / "nested" / "audit.md"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--title",
+            "CLI Audit",
+            "--wcag-audit",
+            str(audit_path),
+        ]
+    )
+
+    assert exit_code == 0
+    audit = audit_path.read_text(encoding="utf-8")
+    assert "# CLI Audit WCAG Audit" in audit
+    assert "Source: `cli.png`" in audit
+    assert "Settings: colors 2; sample step 1;" in audit
+    assert "Thresholds: normal AA >= 4.5" in audit
+    assert "| 1 | `#112233` | color-1 | white | No WCAG text pass |" in audit
+    assert "| 2 | `#eeeeee` | color-2 | black |" in audit
+    assert "#112233" in capsys.readouterr().out
+
+
 def test_cli_precision_formats_palette_reports(tmp_path: Path, capsys) -> None:
     image_path = tmp_path / "cli.png"
     image = Image.new("RGB", (3, 1))

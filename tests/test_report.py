@@ -13,6 +13,7 @@ from swatch_story.report import (
     render_markdown_report,
     render_svg_report,
     render_text_report,
+    render_wcag_audit_report,
     write_ase_report,
     write_css_report,
     write_csv_report,
@@ -22,6 +23,7 @@ from swatch_story.report import (
     write_markdown_report,
     write_svg_report,
     write_text_report,
+    write_wcag_audit_report,
 )
 
 
@@ -597,3 +599,55 @@ def test_write_text_report_creates_parent_directories(tmp_path: Path) -> None:
     write_text_report(sample_summary(), output, title="Palette Story")
 
     assert output.read_text(encoding="utf-8").startswith("Palette Story\n")
+
+
+def test_wcag_audit_report_renders_thresholds_and_recommendations() -> None:
+    audit = render_wcag_audit_report(sample_summary(), title="Palette Audit")
+
+    assert audit == (
+        "# Palette Audit WCAG Audit\n"
+        "\n"
+        "Source: `sample.png`  \n"
+        "Source path: `fixtures/sample.png`  \n"
+        "Image size: 2 x 1 px  \n"
+        "Settings: colors 2; sample step 1; sample limit unknown; "
+        "cluster distance 0; sort frequency; ignored color none; names not included\n"
+        "\n"
+        "Thresholds: normal AA >= 4.5, large AA >= 3.0, "
+        "normal AAA >= 7.0, large AAA >= 4.5.\n"
+        "\n"
+        "| Rank | Color | Label | Preferred text | Black text readiness | "
+        "White text readiness | Recommendation |\n"
+        "| ---: | --- | --- | --- | --- | --- | --- |\n"
+        "| 1 | `#112233` | color-1 | white | No WCAG text pass | "
+        "AA normal, AA large, AAA normal, AAA large | "
+        "Use white text; passes AA normal, AA large, AAA normal, AAA large. |\n"
+        "| 2 | `#eeeeee` | color-2 | black | "
+        "AA normal, AA large, AAA normal, AAA large | No WCAG text pass | "
+        "Use black text; passes AA normal, AA large, AAA normal, AAA large. |\n"
+        "\n"
+    )
+
+
+def test_wcag_audit_report_escapes_user_derived_markdown_cells() -> None:
+    summary = sample_summary()
+    summary["source"] = "source|name\nnext.png"
+    summary["source_path"] = "fixtures/<source|name>.png"
+    summary["palette"][0]["label"] = "brand|ink"
+    summary["palette"][0]["name"] = "blue|steel"
+
+    audit = render_wcag_audit_report(summary, title="Audit | <Story>")
+
+    assert "# Audit \\| &lt;Story&gt; WCAG Audit" in audit
+    assert "Source: `source\\|name<br>next.png`" in audit
+    assert "Source path: `fixtures/&lt;source\\|name&gt;.png`" in audit
+    assert "| 1 | `#112233` | brand\\|ink, blue\\|steel | white |" in audit
+    assert "| brand|ink, blue|steel |" not in audit
+
+
+def test_write_wcag_audit_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "audit.md"
+
+    write_wcag_audit_report(sample_summary(), output, title="Palette Audit")
+
+    assert output.read_text(encoding="utf-8").startswith("# Palette Audit WCAG Audit\n")
