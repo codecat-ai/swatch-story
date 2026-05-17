@@ -32,6 +32,7 @@
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
 - `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
+- `--preset PATH` により、メイン画像、`compare`、`batch` コマンドで再利用できるローカル JSON 抽出プリセットを読み込み、明示した CLI フラグでプリセット値を上書きできます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
 - 2 枚以上のローカル画像監査を、画像ごとのセクション/カード、主要色、パレット行、コントラスト指針、エスケープ済みユーザー由来値、共通抽出設定を含む決定的な Markdown または単体 HTML のチームレビューレポートにまとめられます。
@@ -173,6 +174,24 @@ swatch-story poster.png --colors 6 --precision 1 --json poster-colors.json --tok
 swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.json --json poster-colors.json --css poster-colors.css
 ```
 
+明示した CLI フラグを優先しながら、ローカル JSON 抽出プリセットを再利用します。
+
+```json
+{
+  "colors": 5,
+  "sample_step": 1,
+  "matte": "111827",
+  "names": true,
+  "precision": 1,
+  "label_prefix": "brand",
+  "title": "Poster Palette"
+}
+```
+
+```bash
+swatch-story poster.png --preset presets/poster.json --colors 6 --json poster-colors.json --tokens poster.tokens.json
+```
+
 2 枚のローカル画像を比較し、JSON、CSV、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
 
 ```bash
@@ -190,6 +209,8 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 ```
 
 `batch` コマンドには少なくとも 2 つの画像パスと、`--markdown PATH` または `--html PATH` の少なくとも一方が必要です。両方の出力を同時に指定できます。すべての画像に同じ決定的なパレット抽出設定を適用し、各ソース画像についてソース名/パス、画像サイズ、主要色、パレット行/カード、黒/白文字のコントラスト指針を含む Markdown セクションまたは HTML カードを書き出します。ユーザー由来のタイトル、ファイル名、パス、ラベル、名前はエスケープされ、ファイルは決定的な UTF-8 として書き込まれます。
+
+プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
 
@@ -401,6 +422,7 @@ Drift score: 66.67%
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
 - `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
 - `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、WCAG 監査、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
+- `--preset PATH`: メイン画像、`compare`、`batch` コマンドの実行前に、再利用できる既定値をローカル JSON プリセットから読み込みます。明示した CLI フラグはプリセット値を上書きします。プリセットには `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` を含められます。モードで使わないキーは適用されません。
 - `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
@@ -432,8 +454,8 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- チームやプロジェクト間で再利用できる抽出設定を保存するための、任意のパレットプリセットファイル。
 - 参照画像を候補画像セット全体と比較する、任意のベースライン対 batch ドリフトレビュー。
+- レビューセッション前にチームプリセットファイルを一覧表示して検証する任意のプリセット検出コマンド。
 
 ## コントリビュート
 

@@ -304,10 +304,15 @@ def render_compare_html_report(
 """
 
 
-def write_compare_html_report(report: dict[str, Any], output_path: str | Path) -> None:
+def write_compare_html_report(
+    report: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Palette Drift Report",
+) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_compare_html_report(report), encoding="utf-8")
+    path.write_text(render_compare_html_report(report, title=title), encoding="utf-8")
 
 
 def render_compare_markdown_report(
@@ -349,17 +354,27 @@ def render_compare_markdown_report(
 
 
 def write_compare_markdown_report(
-    report: dict[str, Any], output_path: str | Path
+    report: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Palette Drift Report",
 ) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_compare_markdown_report(report), encoding="utf-8")
+    path.write_text(
+        render_compare_markdown_report(report, title=title), encoding="utf-8"
+    )
 
 
-def write_compare_text_report(report: dict[str, Any], output_path: str | Path) -> None:
+def write_compare_text_report(
+    report: dict[str, Any],
+    output_path: str | Path,
+    *,
+    title: str = "Palette Drift Report",
+) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_compare_text_report(report), encoding="utf-8")
+    path.write_text(render_compare_text_report(report, title=title), encoding="utf-8")
 
 
 def render_compare_csv_report(report: dict[str, Any]) -> str:
