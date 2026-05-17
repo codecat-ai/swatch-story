@@ -26,6 +26,7 @@
 - 在终端中输出紧凑摘要，便于快速查看。
 - 通过 `--sample-limit` 配置自动采样目标，同时保留确定性的 `--sample-step` 覆盖，方便可重复审阅。
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
+- `--matte HEX` 会在提取前把透明和半透明像素合成到指定背景色上，方便按深色、浅色或品牌底色上的实际外观采样图标和 logo。
 - `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
 - `--precision N` 可把 JSON、设计令牌 JSON、CSV、Markdown、WCAG 审计、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
@@ -86,6 +87,12 @@ swatch-story gallery demo-gallery --manifest --tag contrast --tag accessibility
 swatch-story poster.png --colors 5 --json poster-colors.json
 ```
 
+按深色底色上的实际外观提取透明 logo：
+
+```bash
+swatch-story logo.png --colors 5 --matte 111827 --json logo-dark-colors.json
+```
+
 为令牌流水线创建设计令牌 JSON：
 
 ```bash
@@ -114,6 +121,12 @@ swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
 
 ```bash
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
+```
+
+排名前把透明像素合成到品牌背景色上：
+
+```bash
+swatch-story icon.png --colors 4 --matte "#003366" --json icon-brand-colors.json
 ```
 
 在排名前把接近的采样颜色分组：
@@ -155,7 +168,7 @@ swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.j
 对比两张本地图像，并写入 JSON、CSV、HTML、Markdown 和纯文本漂移报告：
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111827 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
 `compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色、共有颜色占比变化和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。使用 `--min-delta-percent N` 可以隐藏绝对占比变化小于 `N` 的共有颜色明细行；新增和移除颜色仍会报告。
@@ -294,7 +307,7 @@ Columns: 2
 }
 ```
 
-JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster_distance": 0` 和 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在可选聚类和排名前移除，因此色块占比只基于剩余采样像素计算。
+JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster_distance": 0` 和 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在可选聚类和排名前移除，因此色块占比只基于剩余采样像素计算。使用 `--matte` 时，JSON 设置会包含规范化的小写值，例如 `"matte": "#111827"`；使用默认白色底色时不会写入该字段。
 
 对比 JSON 输出示例：
 
@@ -362,6 +375,7 @@ Drift score: 66.67%
 - `--sample-step N`：每隔 N 个像素采样一次。默认情况下，小图使用每个像素，大图使用确定性的自动步长。
 - `--sample-limit N`：在未提供 `--sample-step` 时，设置自动步长的目标采样像素数。默认值：10000。必须大于等于 1。如果提供了 `--sample-step`，固定步长会控制像素迭代；JSON 设置仍会包含所选的 `sample_limit` 和实际的 `sample_step`。
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
+- `--matte HEX`：在提取调色板前，把透明或半透明像素合成到十六进制 RGB 背景色上。接受 `#rrggbb` 或 `rrggbb`，不区分大小写。默认行为仍是白色底色，只有显式提供该选项时，JSON 设置才会包含规范化的 `matte`。
 - `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
 - `--precision N`：把面向用户的报告占比、相对亮度和对比度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、设计令牌 JSON、CSV、Markdown、WCAG 审计、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
@@ -369,7 +383,7 @@ Drift score: 66.67%
 - `--title TEXT`：设计令牌 JSON、HTML、Markdown、WCAG 审计、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort` 和 `--names`。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令和可读示例标签的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、标签、预期主色和预期调色板十六进制值。`--tag` 可以重复使用，只生成包含所有请求标签的示例；匹配不区分大小写，未知标签或无匹配结果会在写入文件前失败。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 

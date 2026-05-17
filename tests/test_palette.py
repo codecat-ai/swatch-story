@@ -19,6 +19,12 @@ def save_blocks(path: Path, colors: list[tuple[int, int, int]]) -> None:
     image.save(path)
 
 
+def save_rgba_blocks(path: Path, colors: list[tuple[int, int, int, int]]) -> None:
+    image = Image.new("RGBA", (len(colors), 1))
+    image.putdata(colors)
+    image.save(path)
+
+
 def test_extract_palette_reports_dominant_colors_and_percentages(
     tmp_path: Path,
 ) -> None:
@@ -189,6 +195,45 @@ def test_extract_palette_rejects_invalid_ignore_color(tmp_path: Path) -> None:
         extract_palette(image_path, colors=2, sample_step=1, ignore_color="#ffffgg")
 
 
+def test_extract_palette_composites_alpha_over_custom_matte(tmp_path: Path) -> None:
+    image_path = tmp_path / "transparent.png"
+    save_rgba_blocks(
+        image_path,
+        [
+            (255, 0, 0, 128),
+            (0, 0, 255, 0),
+        ],
+    )
+
+    palette = extract_palette(image_path, colors=2, sample_step=1, matte="#000000")
+
+    assert [entry.hex for entry in palette] == ["#000000", "#800000"]
+
+
+def test_extract_palette_custom_matte_does_not_change_opaque_images(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "opaque.png"
+    save_blocks(image_path, [(255, 0, 0), (0, 0, 255)])
+
+    default_palette = extract_palette(image_path, colors=2, sample_step=1)
+    matte_palette = extract_palette(
+        image_path, colors=2, sample_step=1, matte="#123456"
+    )
+
+    assert [entry.hex for entry in matte_palette] == [
+        entry.hex for entry in default_palette
+    ]
+
+
+def test_extract_palette_rejects_invalid_matte(tmp_path: Path) -> None:
+    image_path = tmp_path / "invalid-matte.png"
+    save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
+
+    with pytest.raises(PaletteError, match="--matte must be #rrggbb or rrggbb"):
+        extract_palette(image_path, colors=2, sample_step=1, matte="#12345g")
+
+
 def test_extract_palette_rejects_invalid_cluster_distance(tmp_path: Path) -> None:
     image_path = tmp_path / "invalid-cluster.png"
     save_blocks(image_path, [(0, 0, 0), (255, 255, 255)])
@@ -279,6 +324,23 @@ def test_summarize_image_normalizes_ignore_color_in_settings(tmp_path: Path) -> 
 
     assert summary["settings"]["ignore_color"] == "#aabbcc"
     assert [entry["hex"] for entry in summary["palette"]] == ["#000000", "#ffffff"]
+
+
+def test_summarize_image_adds_matte_only_when_explicit_and_uses_it(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "summary-matte.png"
+    save_rgba_blocks(image_path, [(255, 0, 0, 128), (0, 0, 255, 0)])
+
+    default_summary = summarize_image(image_path, colors=2, sample_step=1)
+    matte_summary = summarize_image(image_path, colors=2, sample_step=1, matte="000000")
+
+    assert "matte" not in default_summary["settings"]
+    assert matte_summary["settings"]["matte"] == "#000000"
+    assert [entry["hex"] for entry in matte_summary["palette"]] == [
+        "#000000",
+        "#800000",
+    ]
 
 
 def test_summarize_image_frequency_sort_preserves_existing_ranking(

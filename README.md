@@ -26,6 +26,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Compact console summaries for quick terminal use.
 - Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
+- `--matte HEX` composites transparent and semi-transparent pixels over a chosen background color before extraction, so icons and logos can be sampled as they appear on dark, light, or brand surfaces.
 - `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
 - `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
@@ -86,6 +87,12 @@ Create only a JSON report:
 swatch-story poster.png --colors 5 --json poster-colors.json
 ```
 
+Extract a transparent logo as it appears on a dark matte:
+
+```bash
+swatch-story logo.png --colors 5 --matte 111827 --json logo-dark-colors.json
+```
+
 Create design-token JSON for a token pipeline:
 
 ```bash
@@ -114,6 +121,12 @@ Ignore a flat background color before ranking the palette:
 
 ```bash
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
+```
+
+Composite transparent pixels over a brand background before ranking:
+
+```bash
+swatch-story icon.png --colors 4 --matte "#003366" --json icon-brand-colors.json
 ```
 
 Group nearby sampled colors before ranking:
@@ -155,7 +168,7 @@ swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.j
 Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text drift reports:
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111827 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, changed shared-color percentages, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap. Use `--min-delta-percent N` to hide shared-color delta detail rows whose absolute percentage change is less than `N`; added and removed colors are still reported.
@@ -242,7 +255,7 @@ Example palette entry:
 }
 ```
 
-Contrast ratios use the WCAG formula `(lighter + 0.05) / (darker + 0.05)` from relative luminance, comparing each swatch against black luminance `0` and white luminance `1`. `best_text_color` is the higher-contrast option. JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels.
+Contrast ratios use the WCAG formula `(lighter + 0.05) / (darker + 0.05)` from relative luminance, comparing each swatch against black luminance `0` and white luminance `1`. `best_text_color` is the higher-contrast option. JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels. When `--matte` is used, JSON settings include the normalized lowercase value, for example `"matte": "#111827"`; the field is omitted when the default white matte is used.
 
 Example compare JSON output:
 
@@ -360,6 +373,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--sample-step N`: sample every N pixels. By default, small images use every pixel and larger images use a deterministic automatic step.
 - `--sample-limit N`: target sampled pixels for the automatic step when `--sample-step` is omitted. Default: 10000. Must be 1 or greater. If `--sample-step` is provided, the fixed step controls pixel iteration; JSON settings still include the selected `sample_limit` and effective `sample_step`.
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
+- `--matte HEX`: composite transparent or semi-transparent pixels over a hex RGB background before palette extraction. Accepts `#rrggbb` or `rrggbb`, case-insensitive. Default behavior remains white, and JSON settings include normalized `matte` only when this option is explicitly provided.
 - `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
 - `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
@@ -367,7 +381,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--title TEXT`: title for design-token JSON, HTML, Markdown, WCAG audit, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--cluster-distance`, `--sort`, and `--names`. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands and readable sample tags. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, tags, expected dominant colors, and expected palette hex values. `--tag` may be repeated to generate only samples containing all requested tags; matching is case-insensitive, and unknown or empty-result filters fail before writing files. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 

@@ -106,6 +106,17 @@ def normalize_ignore_color(ignore_color: str | None) -> str | None:
     return value
 
 
+def normalize_matte(matte: str | None) -> str | None:
+    if matte is None:
+        return None
+    if not HEX_RGB_PATTERN.fullmatch(matte):
+        raise PaletteError("--matte must be #rrggbb or rrggbb")
+    value = matte.lower()
+    if not value.startswith("#"):
+        value = f"#{value}"
+    return value
+
+
 def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     value = hex_color.lstrip("#")
     return (
@@ -258,12 +269,15 @@ def extract_palette(
     sample_step: int | None = None,
     sample_limit: int = DEFAULT_SAMPLE_LIMIT,
     ignore_color: str | None = None,
+    matte: str | None = None,
     cluster_distance: int = 0,
 ) -> list[PaletteEntry]:
     validate_color_count(colors)
     validate_sample_limit(sample_limit)
     validate_cluster_distance(cluster_distance)
     normalized_ignore_color = normalize_ignore_color(ignore_color)
+    normalized_matte = normalize_matte(matte)
+    matte_rgb = hex_to_rgb(normalized_matte) if normalized_matte is not None else None
     ignored_rgb = (
         hex_to_rgb(normalized_ignore_color)
         if normalized_ignore_color is not None
@@ -289,7 +303,7 @@ def extract_palette(
                 width, height, sample_limit=sample_limit
             )
             sampled = [
-                composite_over_white(rgba_image.getpixel((x, y)))
+                composite_rgba(rgba_image.getpixel((x, y)), matte=matte_rgb)
                 for y in range(0, height, step)
                 for x in range(0, width, step)
             ]
@@ -312,13 +326,20 @@ def extract_palette(
 
 
 def composite_over_white(rgba: tuple[int, int, int, int]) -> tuple[int, int, int]:
+    return composite_rgba(rgba, matte=None)
+
+
+def composite_rgba(
+    rgba: tuple[int, int, int, int], *, matte: tuple[int, int, int] | None = None
+) -> tuple[int, int, int]:
     red, green, blue, alpha = rgba
     if alpha == 255:
         return red, green, blue
+    matte_rgb = matte or (255, 255, 255)
     opacity = alpha / 255
     return tuple(
-        round((channel * opacity) + (255 * (1 - opacity)))
-        for channel in (red, green, blue)
+        round((channel * opacity) + (matte_channel * (1 - opacity)))
+        for channel, matte_channel in zip((red, green, blue), matte_rgb, strict=True)
     )
 
 
@@ -398,6 +419,7 @@ def summarize_image(
     sample_limit: int = DEFAULT_SAMPLE_LIMIT,
     include_color_names: bool = False,
     ignore_color: str | None = None,
+    matte: str | None = None,
     cluster_distance: int = 0,
     sort: str = "frequency",
 ) -> dict[str, Any]:
@@ -405,6 +427,7 @@ def summarize_image(
     validate_cluster_distance(cluster_distance)
     validate_sort(sort)
     normalized_ignore_color = normalize_ignore_color(ignore_color)
+    normalized_matte = normalize_matte(matte)
     path = Path(image_path)
     try:
         from PIL import Image, UnidentifiedImageError
@@ -431,6 +454,7 @@ def summarize_image(
         sample_step=sample_step,
         sample_limit=sample_limit,
         ignore_color=normalized_ignore_color,
+        matte=normalized_matte,
         cluster_distance=cluster_distance,
     )
     entries = [entry.to_dict() for entry in sort_palette(palette, sort)]
@@ -447,6 +471,8 @@ def summarize_image(
     }
     if normalized_ignore_color is not None:
         settings["ignore_color"] = normalized_ignore_color
+    if normalized_matte is not None:
+        settings["matte"] = normalized_matte
     return {
         "source": path.name,
         "source_path": str(path),

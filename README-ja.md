@@ -26,6 +26,7 @@
 - ターミナルで素早く確認できるコンパクトな要約を表示します。
 - `--sample-limit` で自動サンプリングの目標を設定でき、再現性のある確認向けには決定的な `--sample-step` の上書きも使えます。
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
+- `--matte HEX` により、透明または半透明ピクセルを指定した背景色に合成してから抽出でき、暗い面、明るい面、ブランド背景上での見え方に合わせてアイコンやロゴをサンプリングできます。
 - `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
 - `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
@@ -86,6 +87,12 @@ JSON レポートだけを作成します。
 swatch-story poster.png --colors 5 --json poster-colors.json
 ```
 
+暗いマット上での見え方として透明ロゴを抽出します。
+
+```bash
+swatch-story logo.png --colors 5 --matte 111827 --json logo-dark-colors.json
+```
+
 トークンパイプライン向けのデザイントークン JSON を作成します。
 
 ```bash
@@ -114,6 +121,12 @@ swatch-story mural.png --colors 8 --sample-limit 25000 --json mural-colors.json
 
 ```bash
 swatch-story screenshot.png --colors 6 --ignore-color ffffff --json screenshot-colors.json
+```
+
+順位付けの前に透明ピクセルをブランド背景色へ合成します。
+
+```bash
+swatch-story icon.png --colors 4 --matte "#003366" --json icon-brand-colors.json
 ```
 
 順位付けの前に近いサンプリング色をグループ化します。
@@ -149,7 +162,7 @@ swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.j
 2 枚のローカル画像を比較し、JSON、CSV、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
 
 ```bash
-swatch-story compare before.png after.png --colors 6 --sample-step 1 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
+swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111827 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
 `compare` コマンドは、前後の画像パス、それぞれの主要色、共有色、追加色、削除色、共有色の割合変化、ドリフトスコアを含む簡潔なターミナルレポートを表示します。スコアは選択済みパレットの HEX 値のうち変化した割合で、`100 * (1 - shared / union)` として計算します。`0%` は選択済みパレットの HEX 値が同一であること、`100%` は重なりがないことを意味します。`--min-delta-percent N` を使うと、絶対値で `N` 未満の割合変化しかない共有色の詳細行を非表示にできます。追加色と削除色は引き続き表示されます。
@@ -292,7 +305,7 @@ Columns: 2
 }
 ```
 
-JSON 設定には `cluster_distance` と選択した並べ替えモード、例えば `"cluster_distance": 0` と `"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは任意のクラスタリングと順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。
+JSON 設定には `cluster_distance` と選択した並べ替えモード、例えば `"cluster_distance": 0` と `"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは任意のクラスタリングと順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。`--matte` を使うと、JSON 設定には正規化された小文字の値、例えば `"matte": "#111827"` が含まれます。既定の白いマットを使う場合、このフィールドは省略されます。
 
 比較 JSON 出力例：
 
@@ -360,6 +373,7 @@ Drift score: 66.67%
 - `--sample-step N`: N ピクセルごとにサンプリングします。既定では、小さい画像は全ピクセルを使い、大きい画像は決定的な自動ステップを使います。
 - `--sample-limit N`: `--sample-step` が省略された場合に、自動ステップが目標とするサンプリング済みピクセル数を指定します。既定値は 10000 です。1 以上である必要があります。`--sample-step` が指定された場合、固定ステップがピクセル走査を制御しますが、JSON 設定には選択された `sample_limit` と実際の `sample_step` が含まれます。
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
+- `--matte HEX`: パレット抽出の前に、透明または半透明ピクセルを十六進 RGB 背景色に合成します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。既定の挙動は白いマットのままで、このオプションを明示した場合だけ JSON 設定に正規化された `matte` が含まれます。
 - `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
 - `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
@@ -367,7 +381,7 @@ Drift score: 66.67%
 - `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--cluster-distance`、`--sort`、`--names` を再利用します。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドと読みやすいサンプルタグを含む Markdown `README.md` gallery も生成します。`--manifest` は、schema version `1`、generator 名、サンプルファイル名、寸法、ストーリー、タグ、期待される主要色、期待されるパレット HEX 値を含む決定的な UTF-8 `manifest.json` も書き出します。`--tag` は繰り返し指定でき、要求したタグをすべて含むサンプルだけを生成します。照合は大文字小文字を区別せず、不明なタグや一致しないフィルターはファイルを書き出す前に失敗します。`--no-index` は `README.md` だけを省略するため、`--manifest` と組み合わせられます。`--force` がない限り、`manifest.json` を含む既存の gallery ファイルは上書きしません。
 
