@@ -15,6 +15,7 @@ from swatch_story.compare import (
     baseline_report,
     compare_summaries,
     render_compare_text,
+    write_baseline_html_report,
     write_baseline_json,
     write_baseline_markdown_report,
     write_baseline_text_report,
@@ -352,6 +353,9 @@ def build_baseline_parser() -> argparse.ArgumentParser:
         "--markdown", dest="markdown_path", help="Write Markdown report to PATH"
     )
     parser.add_argument(
+        "--html", dest="html_path", help="Write standalone HTML report to PATH"
+    )
+    parser.add_argument(
         "--text", dest="text_path", help="Write plain-text report to PATH"
     )
     parser.add_argument(
@@ -367,7 +371,7 @@ def build_baseline_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--title",
         default="Baseline Drift Review",
-        help="Title for JSON, Markdown, and text baseline reports",
+        help="Title for JSON, HTML, Markdown, and text baseline reports",
     )
     parser.add_argument(
         "--precision",
@@ -765,8 +769,15 @@ def baseline_main(argv: Sequence[str]) -> int:
     parser = build_baseline_parser()
     args = parser.parse_args(argv)
     apply_preset(parser, args, argv, BASELINE_PRESET_KEYS)
-    if not args.json_path and not args.markdown_path and not args.text_path:
-        parser.error("at least one of --json, --markdown, or --text is required")
+    if (
+        not args.json_path
+        and not args.markdown_path
+        and not args.text_path
+        and not args.html_path
+    ):
+        parser.error(
+            "at least one of --json, --markdown, --text, or --html is required"
+        )
 
     try:
         baseline_summary = summarize_image(
@@ -815,6 +826,9 @@ def baseline_main(argv: Sequence[str]) -> int:
     if args.text_path:
         write_baseline_text_report(output_report, args.text_path)
         written.append(Path(args.text_path))
+    if args.html_path:
+        write_baseline_html_report(output_report, args.html_path)
+        written.append(Path(args.html_path))
 
     destinations = ", ".join(str(path) for path in written)
     print(

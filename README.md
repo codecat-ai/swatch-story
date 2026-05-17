@@ -34,7 +34,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command, including `--tokens` keys.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
-- Baseline drift reviews that compare one reference image against multiple candidates, rank candidates by drift score, and write deterministic JSON, Markdown, and plain-text reports.
+- Baseline drift reviews that compare one reference image against multiple candidates, rank candidates by drift score, and write deterministic JSON, Markdown, plain-text, and standalone HTML dashboard reports.
 - Batch team-review reports that combine two or more local image audits into one deterministic Markdown and/or standalone HTML file with one section/card per image, dominant colors, palette rows, contrast guidance, escaped user-derived values, and shared extraction settings.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
@@ -73,7 +73,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-revie
 Rank candidate images against a reference palette:
 
 ```bash
-swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt
+swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt --html baseline-review.html
 ```
 
 ## Examples
@@ -217,10 +217,10 @@ The compare CSV report is a deterministic UTF-8 table for spreadsheet palette dr
 Compare one baseline image against several candidates and rank drift:
 
 ```bash
-swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt --html baseline-drift.html
 ```
 
-The baseline command requires one baseline image, at least one candidate image, and at least one of `--json PATH`, `--markdown PATH`, or `--text PATH`; all three outputs may be requested together. It reuses the compare drift logic for every candidate, keeps JSON candidates in input order with a rank and drift score, and sorts Markdown/text summaries by drift score descending. Baseline reports include baseline source metadata, candidate source metadata, shared colors, added colors, removed colors, filtered changed-color details, and escaped user-derived titles, names, and paths.
+The baseline command requires one baseline image, at least one candidate image, and at least one of `--json PATH`, `--markdown PATH`, `--text PATH`, or `--html PATH`; all four outputs may be requested together. It reuses the compare drift logic for every candidate, keeps JSON candidates in input order with a rank and drift score, and sorts Markdown/text/HTML summaries by drift score descending. Baseline reports include baseline source metadata, candidate source metadata, shared colors, added colors, removed colors, filtered changed-color details, and escaped user-derived titles, names, and paths. The baseline HTML report is a standalone dashboard with deterministic inline CSS, metadata panels, a sortable-looking ranked candidate table, and visual swatches for shared, added, removed, and changed color lists.
 
 Combine several local image audits into one team-review report:
 
@@ -442,7 +442,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. These outputs can be requested together.
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. `--html PATH` writes a standalone ranked dashboard with escaped metadata and visual swatches for shared, added, removed, and changed color lists. These outputs can be requested together.
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
 
@@ -470,7 +470,6 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional HTML baseline drift dashboard with sortable candidate rows and palette previews.
 - Optional preset discovery command that lists and validates team preset files before a review session.
 
 ## Contributing

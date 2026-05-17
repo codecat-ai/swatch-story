@@ -35,7 +35,7 @@
 - `--preset PATH` により、メイン画像、`compare`、`baseline`、`batch` コマンドで再利用できるローカル JSON 抽出プリセットを読み込み、明示した CLI フラグでプリセット値を上書きできます。
 - 任意の `--names` ヒントにより、red、teal、blue、brown、black、white、gray などの小さな組み込み近似名セットへ色を対応付けます。
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
-- ベースラインドリフトレビューでは、1 枚の参照画像を複数の候補画像と比較し、ドリフトスコアで順位付けし、決定的な JSON、Markdown、プレーンテキストレポートを書き出せます。
+- ベースラインドリフトレビューでは、1 枚の参照画像を複数の候補画像と比較し、ドリフトスコアで順位付けし、決定的な JSON、Markdown、プレーンテキスト、単体 HTML ダッシュボードレポートを書き出せます。
 - 2 枚以上のローカル画像監査を、画像ごとのセクション/カード、主要色、パレット行、コントラスト指針、エスケープ済みユーザー由来値、共通抽出設定を含む決定的な Markdown または単体 HTML のチームレビューレポートにまとめられます。
 - ソースチェックアウト内で、小さな決定的 PNG、安定した授業テーマタグ、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
 
@@ -74,7 +74,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-revie
 参照パレットに対して候補画像を順位付けします。
 
 ```bash
-swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt
+swatch-story baseline reference.png option-a.png option-b.png --colors 6 --markdown baseline-review.md --text baseline-review.txt --html baseline-review.html
 ```
 
 ## 例
@@ -212,10 +212,10 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 1 枚のベースライン画像を複数の候補画像と比較し、ドリフトで順位付けします。
 
 ```bash
-swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt --html baseline-drift.html
 ```
 
-`baseline` コマンドには、1 枚のベースライン画像、少なくとも 1 枚の候補画像、そして `--json PATH`、`--markdown PATH`、`--text PATH` の少なくとも 1 つが必要です。3 つの出力は同時に指定できます。各候補に `compare` と同じドリフトロジックを使い、JSON では候補を入力順に保ちながら順位とドリフトスコアを含め、Markdown/テキストの要約はドリフトスコア降順で並べます。ベースラインレポートには、ベースラインのソースメタデータ、候補のソースメタデータ、共有色、追加色、削除色、フィルター済みの色変化詳細、エスケープ済みのユーザー由来タイトル、名前、パスが含まれます。
+`baseline` コマンドには、1 枚のベースライン画像、少なくとも 1 枚の候補画像、そして `--json PATH`、`--markdown PATH`、`--text PATH`、`--html PATH` の少なくとも 1 つが必要です。4 つの出力は同時に指定できます。各候補に `compare` と同じドリフトロジックを使い、JSON では候補を入力順に保ちながら順位とドリフトスコアを含め、Markdown/テキスト/HTML の要約はドリフトスコア降順で並べます。ベースラインレポートには、ベースラインのソースメタデータ、候補のソースメタデータ、共有色、追加色、削除色、フィルター済みの色変化詳細、エスケープ済みのユーザー由来タイトル、名前、パスが含まれます。ベースライン HTML レポートは単体ダッシュボードで、決定的なインライン CSS、メタデータパネル、並べ替え可能に見える候補順位表、共有/追加/削除/変化色リストの視覚的なスウォッチを含みます。
 
 複数のローカル画像監査を 1 つのチームレビューレポートにまとめます。
 
@@ -443,7 +443,7 @@ Drift score: 66.67%
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。これらの出力は同時に指定できます。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。`--html PATH` は、エスケープ済みメタデータと共有/追加/削除/変化色リストの視覚的なスウォッチを含む単体の順位付きダッシュボードを書き出します。これらの出力は同時に指定できます。
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
 
@@ -471,7 +471,6 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- 並べ替え可能な候補行とパレットプレビューを備えた任意の HTML ベースラインドリフトダッシュボード。
 - レビューセッション前にチームプリセットファイルを一覧表示して検証する任意のプリセット検出コマンド。
 
 ## コントリビュート

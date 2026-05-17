@@ -575,7 +575,7 @@ def test_cli_baseline_requires_an_output_path(tmp_path: Path, capsys) -> None:
 
     assert exc_info.value.code == 2
     assert (
-        "at least one of --json, --markdown, or --text is required"
+        "at least one of --json, --markdown, --text, or --html is required"
         in capsys.readouterr().err
     )
 
@@ -643,6 +643,42 @@ def test_cli_baseline_writes_json_markdown_and_text_reports(
     assert (
         f"Wrote baseline report for 2 candidates to {json_path}, {markdown_path}, "
         f"{text_path}" in capsys.readouterr().out
+    )
+
+
+def test_cli_baseline_writes_html_report(tmp_path: Path, capsys) -> None:
+    baseline_path = tmp_path / "baseline <ref>.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(baseline_path)
+    candidate_path = tmp_path / "candidate & final.png"
+    Image.new("RGB", (1, 1), (0, 0, 255)).save(candidate_path)
+    html_path = tmp_path / "reports" / "baseline.html"
+
+    exit_code = main(
+        [
+            "baseline",
+            str(baseline_path),
+            str(candidate_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--title",
+            "Baseline <Review>",
+            "--html",
+            str(html_path),
+        ]
+    )
+
+    assert exit_code == 0
+    html = html_path.read_text(encoding="utf-8")
+    assert html.startswith("<!doctype html>\n")
+    assert "Baseline &lt;Review&gt;" in html
+    assert "baseline &lt;ref&gt;.png" in html
+    assert "candidate &amp; final.png" in html
+    assert '<th scope="col" class="sortable">Rank</th>' in html
+    assert 'style="background: #0000ff"' in html
+    assert f"Wrote baseline report for 1 candidates to {html_path}" in (
+        capsys.readouterr().out
     )
 
 
