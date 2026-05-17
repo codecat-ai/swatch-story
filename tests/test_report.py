@@ -3,6 +3,7 @@ import struct
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 import swatch_story.report as report
 from swatch_story.report import (
@@ -19,6 +20,7 @@ from swatch_story.report import (
     write_csv_report,
     write_gpl_report,
     write_html_report,
+    write_html_thumbnail,
     write_json_report,
     write_markdown_report,
     write_svg_report,
@@ -433,12 +435,58 @@ def test_html_report_includes_color_names_only_when_present() -> None:
     assert "gray</dd>" in named_html
 
 
+def test_html_report_includes_escaped_thumbnail_preview() -> None:
+    html = render_html_report(
+        sample_summary(),
+        thumbnail_href='thumbs/source "one&two<.png',
+    )
+
+    assert '<section class="source-preview"' in html
+    assert 'aria-label="Source image preview"' in html
+    assert "Source preview</h2>" in html
+    assert (
+        '<img src="thumbs/source &quot;one&amp;two&lt;.png" '
+        'alt="Thumbnail preview of sample.png"'
+    ) in html
+    assert 'src="thumbs/source "one&two<.png"' not in html
+    assert "<.png" not in html
+
+
 def test_write_html_report_creates_parent_directories(tmp_path: Path) -> None:
     output = tmp_path / "nested" / "story.html"
 
     write_html_report(sample_summary(), output, title="Palette Story")
 
     assert output.read_text(encoding="utf-8").startswith("<!doctype html>\n")
+
+
+def test_write_html_report_uses_thumbnail_href(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "story.html"
+
+    write_html_report(
+        sample_summary(),
+        output,
+        title="Palette Story",
+        thumbnail_href="../thumbs/story-thumb.png",
+    )
+
+    html = output.read_text(encoding="utf-8")
+    assert '<img src="../thumbs/story-thumb.png"' in html
+    assert "Thumbnail preview of sample.png" in html
+
+
+def test_write_html_thumbnail_preserves_aspect_ratio_and_bounds(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "source.png"
+    Image.new("RGB", (640, 160), (17, 34, 51)).save(image_path)
+    thumbnail_path = tmp_path / "nested" / "thumb.png"
+
+    write_html_thumbnail(image_path, thumbnail_path, max_dimension=320)
+
+    with Image.open(thumbnail_path) as thumbnail:
+        assert thumbnail.size == (320, 80)
+        assert thumbnail.mode == "RGB"
 
 
 def test_write_css_report_creates_deterministic_custom_properties(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from collections.abc import Sequence
@@ -30,6 +31,7 @@ from swatch_story.report import (
     write_csv_report,
     write_gpl_report,
     write_html_report,
+    write_html_thumbnail,
     write_json_report,
     write_markdown_report,
     write_svg_report,
@@ -107,6 +109,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--csv", dest="csv_path", help="Write CSV report to PATH")
     parser.add_argument(
         "--html", dest="html_path", help="Write standalone HTML to PATH"
+    )
+    parser.add_argument(
+        "--html-thumbnail",
+        dest="html_thumbnail_path",
+        help=(
+            "Write a local thumbnail image to PATH and link it from --html. "
+            "Requires --html."
+        ),
     )
     parser.add_argument(
         "--css", dest="css_path", help="Write CSS custom properties to PATH"
@@ -292,6 +302,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.html_thumbnail_path and not args.html_path:
+        parser.error("--html-thumbnail requires --html")
 
     try:
         summary = summarize_image(
@@ -324,11 +336,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.csv_path:
         write_csv_report(summary, args.csv_path, precision=args.precision)
     if args.html_path:
+        thumbnail_href = None
+        if args.html_thumbnail_path:
+            write_html_thumbnail(args.image, args.html_thumbnail_path)
+            thumbnail_href = relative_href(
+                Path(args.html_path),
+                Path(args.html_thumbnail_path),
+            )
         write_html_report(
             summary,
             args.html_path,
             title=args.title,
             precision=args.precision,
+            thumbnail_href=thumbnail_href,
         )
     if args.css_path:
         write_css_report(summary, args.css_path)
@@ -372,6 +392,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 def apply_label_prefix(summary: dict, prefix: str) -> None:
     for entry in summary["palette"]:
         entry["label"] = f"{prefix}-{entry['rank']}"
+
+
+def relative_href(from_html_path: Path, target_path: Path) -> str:
+    try:
+        href = os.path.relpath(
+            target_path.resolve(strict=False),
+            start=from_html_path.parent.resolve(strict=False),
+        )
+    except ValueError:
+        href = str(target_path)
+    return Path(href).as_posix()
 
 
 def gallery_main(argv: Sequence[str]) -> int:

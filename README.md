@@ -23,6 +23,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Deterministic GIMP `.gpl` palette output for design-tool interoperability.
 - Deterministic Adobe Swatch Exchange `.ase` output with RGB swatches grouped by report title.
 - Standalone HTML contact-sheet reports with image metadata, extraction settings, accessible swatch cards, escaped user-derived values, and contrast guidance for browser review or design critique.
+- Optional local sidecar thumbnails for HTML reports with `--html-thumbnail PATH`, linked from the report without embedding the source image as base64.
 - Compact console summaries for quick terminal use.
 - Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
@@ -111,6 +112,12 @@ Create a shareable local HTML report with a fixed sampling step:
 swatch-story screenshot.png --colors 8 --sample-step 2 --html screenshot-story.html
 ```
 
+Create a local HTML report with a small sidecar thumbnail for quick source review:
+
+```bash
+swatch-story screenshot.png --colors 8 --html reports/screenshot-story.html --html-thumbnail reports/assets/screenshot-thumb.png
+```
+
 Tune automatic sampling for a very large image without choosing a fixed step:
 
 ```bash
@@ -175,7 +182,7 @@ The compare command prints a concise terminal report with the before and after p
 
 The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review with compact CSS-only side-by-side palette preview strips for each image. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, filtered changed-color delta details, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
 
-The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance.
+The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
 The SVG report is a standalone local swatch sheet for docs and slides. It shows the title, source filename, image dimensions, extraction settings, and one row per swatch with a color rectangle, HEX, optional approximate name, percent, luminance, black/white contrast ratios, label, and readable text color. User-derived title, source, labels, and names are XML-escaped, and the source image itself is not embedded.
 
@@ -364,6 +371,7 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--csv PATH`: write a UTF-8 CSV report with stable columns: `rank`, `hex`, `r`, `g`, `b`, `count`, `percent`, `luminance`, `contrast_with_black`, `contrast_with_white`, `best_text_color`, `label`, and `name`.
 - `--css PATH`: write CSS custom properties.
 - `--html PATH`: write a standalone HTML report.
+- `--html-thumbnail PATH`: write a small local sidecar thumbnail and link it from the HTML report. This option requires `--html PATH`; the thumbnail is bounded to 320 px on its longest side, preserves aspect ratio, creates parent directories as needed, and keeps image data local instead of embedding base64 in HTML.
 - `--markdown PATH`: write a portable Markdown report.
 - `--wcag-audit PATH`: write a deterministic UTF-8 Markdown audit with source metadata, extraction settings, WCAG normal/large text AA/AAA readiness against black and white text, preferred text color, and one recommendation per swatch.
 - `--text PATH`: write a UTF-8 plain-text palette sheet with title, source filename, image size, extraction settings, and one line per swatch containing rank, hex, RGB triplet, percent, label, black/white contrast ratios, best text color, and optional name hint.
@@ -408,7 +416,7 @@ pytest -q
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
 - Optional palette preset files for saving reusable extraction settings across teams and projects.
-- Optional sidecar image thumbnails in HTML reports for quick source visual review without embedding full-size images.
+- Optional batch report that combines multiple image audits into one team review Markdown or HTML file.
 
 ## Contributing
 
