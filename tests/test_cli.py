@@ -350,6 +350,79 @@ def test_cli_compare_does_not_accept_tokens(tmp_path: Path, capsys) -> None:
     assert "unrecognized arguments: --tokens" in capsys.readouterr().err
 
 
+def test_cli_batch_requires_at_least_two_images(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "one.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["batch", str(image_path), "--markdown", str(tmp_path / "batch.md")])
+
+    assert exc_info.value.code == 2
+    assert "at least two image paths are required" in capsys.readouterr().err
+
+
+def test_cli_batch_requires_an_output_path(tmp_path: Path, capsys) -> None:
+    first_path = tmp_path / "one.png"
+    second_path = tmp_path / "two.png"
+    Image.new("RGB", (1, 1), (255, 0, 0)).save(first_path)
+    Image.new("RGB", (1, 1), (0, 0, 255)).save(second_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["batch", str(first_path), str(second_path)])
+
+    assert exc_info.value.code == 2
+    assert "at least one of --markdown or --html is required" in capsys.readouterr().err
+
+
+def test_cli_batch_writes_markdown_and_html_reports(tmp_path: Path, capsys) -> None:
+    first_path = tmp_path / "one <draft>.png"
+    first = Image.new("RGB", (2, 1))
+    first.putdata([(255, 0, 0), (0, 0, 255)])
+    first.save(first_path)
+    second_path = tmp_path / "two & final.png"
+    Image.new("RGB", (1, 2), (17, 34, 51)).save(second_path)
+    markdown_path = tmp_path / "reports" / "batch.md"
+    html_path = tmp_path / "reports" / "batch.html"
+
+    exit_code = main(
+        [
+            "batch",
+            str(first_path),
+            str(second_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--names",
+            "--precision",
+            "1",
+            "--title",
+            "Team <Review>",
+            "--markdown",
+            str(markdown_path),
+            "--html",
+            str(html_path),
+        ]
+    )
+
+    assert exit_code == 0
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown.startswith("# Team &lt;Review&gt;\n")
+    assert "## one &lt;draft&gt;.png" in markdown
+    assert "## two &amp; final.png" in markdown
+    assert "Settings: colors 2; sample step 1;" in markdown
+    assert "`#0000ff` 50.0%" in markdown
+    assert "`#112233` 100.0%" in markdown
+    assert "name:" not in markdown
+    html = html_path.read_text(encoding="utf-8")
+    assert "<h1>Team &lt;Review&gt;</h1>" in html
+    assert "one &lt;draft&gt;.png" in html
+    assert "two &amp; final.png" in html
+    assert "#112233 100.0%" in html
+    console = capsys.readouterr().out
+    assert f"Wrote batch report for 2 images to {markdown_path}, {html_path}" in console
+
+
 def _ase_strings(data: bytes) -> list[str]:
     assert data[:4] == b"ASEF"
     block_count = struct.unpack_from(">I", data, 8)[0]

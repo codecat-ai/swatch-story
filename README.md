@@ -34,6 +34,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command, including `--tokens` keys.
 - Optional `--names` hints that map colors to a small built-in set of approximate common names such as red, teal, blue, brown, black, white, and gray.
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
+- Batch team-review reports that combine two or more local image audits into one deterministic Markdown and/or standalone HTML file with one section/card per image, dominant colors, palette rows, contrast guidance, escaped user-derived values, and shared extraction settings.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
 ## Installation
@@ -61,6 +62,12 @@ swatch-story gallery demo-gallery
 ```
 
 The gallery command writes tiny deterministic PNG files plus `demo-gallery/README.md` with example commands and tags for extracting palettes and reports from those samples. Add `--manifest` when lesson material or tests need `demo-gallery/manifest.json` with expected dominant colors, palette hex values, and stable lesson-theme tags.
+
+Create a team-review report for several local images:
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --markdown team-review.md --html team-review.html
+```
 
 ## Examples
 
@@ -181,6 +188,14 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, changed shared-color percentages, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap. Use `--min-delta-percent N` to hide shared-color delta detail rows whose absolute percentage change is less than `N`; added and removed colors are still reported.
 
 The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review with compact CSS-only side-by-side palette preview strips for each image. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, filtered changed-color delta details, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
+
+Combine several local image audits into one team-review report:
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --names --title "Campaign Palette Review" --markdown campaign-review.md --html campaign-review.html
+```
+
+The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
@@ -391,6 +406,8 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
+
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands and readable sample tags. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, tags, expected dominant colors, and expected palette hex values. `--tag` may be repeated to generate only samples containing all requested tags; matching is case-insensitive, and unknown or empty-result filters fail before writing files. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 
 The MVP does not read a config file and does not fetch remote images.
@@ -407,7 +424,7 @@ python -m build
 
 ## Testing
 
-The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, report rendering, design-token JSON output, gallery manifest content, and CLI file output.
+The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, single-image, compare, and batch report rendering, design-token JSON output, gallery manifest content, escaping of user-derived report values, and CLI file output.
 
 ```bash
 pytest -q
@@ -416,7 +433,7 @@ pytest -q
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
 - Optional palette preset files for saving reusable extraction settings across teams and projects.
-- Optional batch report that combines multiple image audits into one team review Markdown or HTML file.
+- Optional baseline-vs-batch drift review that compares a reference image against a whole set of candidate images.
 
 ## Contributing
 

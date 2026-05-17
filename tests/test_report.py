@@ -8,6 +8,8 @@ from PIL import Image
 import swatch_story.report as report
 from swatch_story.report import (
     render_ase_report,
+    render_batch_html_report,
+    render_batch_markdown_report,
     render_csv_report,
     render_gpl_report,
     render_html_report,
@@ -16,6 +18,8 @@ from swatch_story.report import (
     render_text_report,
     render_wcag_audit_report,
     write_ase_report,
+    write_batch_html_report,
+    write_batch_markdown_report,
     write_css_report,
     write_csv_report,
     write_gpl_report,
@@ -74,6 +78,28 @@ def named_summary() -> dict:
     summary["settings"]["color_names"] = True
     summary["palette"][0]["name"] = "blue"
     summary["palette"][1]["name"] = "gray"
+    return summary
+
+
+def second_sample_summary() -> dict:
+    summary = sample_summary()
+    summary["source"] = "second | sample <draft>.png"
+    summary["source_path"] = "fixtures/second | sample <draft>.png"
+    summary["size"] = {"width": 1, "height": 2}
+    summary["palette"] = [
+        {
+            "rank": 1,
+            "hex": "#ff0000",
+            "rgb": [255, 0, 0],
+            "count": 2,
+            "percent": 100.0,
+            "luminance": 0.213,
+            "contrast_with_black": 5.26,
+            "contrast_with_white": 4.0,
+            "best_text_color": "black",
+            "label": "color-1",
+        }
+    ]
     return summary
 
 
@@ -475,6 +501,45 @@ def test_write_html_report_uses_thumbnail_href(tmp_path: Path) -> None:
     assert "Thumbnail preview of sample.png" in html
 
 
+def test_batch_html_report_combines_images_with_escaped_cards() -> None:
+    first = sample_summary()
+    first["source"] = 'sample"><script>.png'
+    first["source_path"] = "fixtures/<sample&story>.png"
+    first["palette"][0]["name"] = "<blue & steel>"
+
+    html = render_batch_html_report(
+        [first, second_sample_summary()],
+        title="<Team & Review>",
+        precision=1,
+    )
+
+    assert html.startswith("<!doctype html>\n")
+    assert "<title>&lt;Team &amp; Review&gt;</title>" in html
+    assert "<h1>&lt;Team &amp; Review&gt;</h1>" in html
+    assert "2 audited images" in html
+    assert "sample&quot;&gt;&lt;script&gt;.png" in html
+    assert "fixtures/&lt;sample&amp;story&gt;.png" in html
+    assert "&lt;blue &amp; steel&gt;" in html
+    assert "second | sample &lt;draft&gt;.png" in html
+    assert "Dominant colors</dt>" in html
+    assert "#ff0000 100.0%" in html
+    assert "Use black text; contrast black 5.3:1; white 4.0:1" in html
+    assert "<script>" not in html
+    assert "<Team & Review>" not in html
+
+
+def test_write_batch_html_report_creates_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "batch.html"
+
+    write_batch_html_report(
+        [sample_summary(), second_sample_summary()],
+        output,
+        title="Team Review",
+    )
+
+    assert output.read_text(encoding="utf-8").startswith("<!doctype html>\n")
+
+
 def test_write_html_thumbnail_preserves_aspect_ratio_and_bounds(
     tmp_path: Path,
 ) -> None:
@@ -588,6 +653,47 @@ def test_write_markdown_report_creates_parent_directories(tmp_path: Path) -> Non
     write_markdown_report(sample_summary(), output, title="Palette Story")
 
     assert output.read_text(encoding="utf-8").startswith("# Palette Story\n")
+
+
+def test_batch_markdown_report_combines_images_with_escaped_metadata() -> None:
+    first = sample_summary()
+    first["source"] = "sample <one>.png"
+    first["source_path"] = "fixtures/sample <one>.png"
+
+    markdown = render_batch_markdown_report(
+        [first, second_sample_summary()],
+        title="Team <Palette> Review",
+        precision=1,
+    )
+
+    assert markdown.startswith("# Team &lt;Palette&gt; Review\n")
+    assert "Images: 2" in markdown
+    assert (
+        "Settings: colors 2; sample step 1; sample limit unknown; "
+        "cluster distance 0; sort frequency; ignored color none; names not included"
+    ) in markdown
+    assert "## sample &lt;one&gt;.png" in markdown
+    assert "Source path: `fixtures/sample &lt;one&gt;.png`" in markdown
+    assert "Dominant colors: `#112233` 50.0%, `#eeeeee` 50.0%" in markdown
+    assert "### second \\| sample &lt;draft&gt;.png" not in markdown
+    assert "## second \\| sample &lt;draft&gt;.png" in markdown
+    assert "| 1 | `#ff0000` | `255, 0, 0` | 100.0% | 0.2 |" in markdown
+    assert "Use black text; contrast black 5.3:1; white 4.0:1" in markdown
+    assert "<script>" not in markdown
+
+
+def test_write_batch_markdown_report_creates_parent_directories(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "nested" / "batch.md"
+
+    write_batch_markdown_report(
+        [sample_summary(), second_sample_summary()],
+        output,
+        title="Team Review",
+    )
+
+    assert output.read_text(encoding="utf-8").startswith("# Team Review\n")
 
 
 def test_text_report_renders_paste_friendly_palette_sheet() -> None:
