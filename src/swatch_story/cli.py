@@ -249,6 +249,15 @@ def add_palette_options(parser: argparse.ArgumentParser) -> None:
         help=("Exclude sampled pixels matching #rrggbb or rrggbb before ranking."),
     )
     parser.add_argument(
+        "--matte",
+        default=None,
+        metavar="HEX",
+        help=(
+            "Composite transparent pixels over #rrggbb or rrggbb before extraction. "
+            "Default: white."
+        ),
+    )
+    parser.add_argument(
         "--cluster-distance",
         type=cluster_distance_value,
         default=0,
@@ -292,6 +301,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sample_limit=args.sample_limit,
             include_color_names=args.names,
             ignore_color=args.ignore_color,
+            matte=args.matte,
             cluster_distance=args.cluster_distance,
             sort=args.sort,
         )
@@ -399,6 +409,7 @@ def compare_main(argv: Sequence[str]) -> int:
             sample_limit=args.sample_limit,
             include_color_names=args.names,
             ignore_color=args.ignore_color,
+            matte=args.matte,
             cluster_distance=args.cluster_distance,
             sort=args.sort,
         )
@@ -409,6 +420,7 @@ def compare_main(argv: Sequence[str]) -> int:
             sample_limit=args.sample_limit,
             include_color_names=args.names,
             ignore_color=args.ignore_color,
+            matte=args.matte,
             cluster_distance=args.cluster_distance,
             sort=args.sort,
         )

@@ -860,6 +860,48 @@ def test_cli_compare_uses_existing_palette_options(tmp_path: Path, capsys) -> No
     assert "Added colors: #008080" in capsys.readouterr().out
 
 
+def test_cli_compare_uses_matte_for_both_images(tmp_path: Path, capsys) -> None:
+    before_path = tmp_path / "before-transparent.png"
+    before = Image.new("RGBA", (2, 1))
+    before.putdata([(255, 0, 0, 128), (0, 0, 255, 0)])
+    before.save(before_path)
+    after_path = tmp_path / "after-transparent.png"
+    after = Image.new("RGBA", (2, 1))
+    after.putdata([(0, 255, 0, 128), (0, 0, 255, 0)])
+    after.save(after_path)
+    json_path = tmp_path / "compare.json"
+
+    exit_code = main(
+        [
+            "compare",
+            str(before_path),
+            str(after_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--matte",
+            "#000000",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    report = json.loads(json_path.read_text(encoding="utf-8"))
+    assert report["before"]["settings"]["matte"] == "#000000"
+    assert report["after"]["settings"]["matte"] == "#000000"
+    assert [entry["hex"] for entry in report["before"]["palette"]] == [
+        "#000000",
+        "#800000",
+    ]
+    assert [entry["hex"] for entry in report["after"]["palette"]] == [
+        "#000000",
+        "#008000",
+    ]
+    assert "Shared colors: #000000" in capsys.readouterr().out
+
+
 def test_cli_compare_returns_palette_error_exit_code(tmp_path: Path, capsys) -> None:
     before_path = tmp_path / "missing.png"
     after_path = tmp_path / "after.png"
@@ -964,6 +1006,48 @@ def test_cli_ignore_color_updates_palette_json_and_console(
     console = capsys.readouterr().out
     assert "#ffffff" not in console
     assert "#0000ff" in console
+
+
+def test_cli_matte_updates_transparent_palette_json_and_console(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-matte.png"
+    image = Image.new("RGBA", (2, 1))
+    image.putdata([(255, 0, 0, 128), (0, 0, 255, 0)])
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "2",
+            "--sample-step",
+            "1",
+            "--matte",
+            "000000",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["matte"] == "#000000"
+    assert [entry["hex"] for entry in summary["palette"]] == ["#000000", "#800000"]
+    assert "#800000" in capsys.readouterr().out
+
+
+def test_cli_rejects_invalid_matte_with_palette_error_style(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-invalid-matte.png"
+    Image.new("RGBA", (1, 1), (255, 0, 0, 128)).save(image_path)
+
+    exit_code = main([str(image_path), "--matte", "#12345g"])
+
+    assert exit_code == 2
+    assert "swatch-story: --matte must be #rrggbb or rrggbb" in capsys.readouterr().err
 
 
 def test_cli_cluster_distance_updates_palette_json_and_console(
