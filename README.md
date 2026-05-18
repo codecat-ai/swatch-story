@@ -28,7 +28,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Configurable automatic sampling with `--sample-limit`, while keeping deterministic `--sample-step` overrides for repeatable reviews.
 - `--ignore-color HEX` excludes an exact RGB color such as a flat screenshot background before palette ranking, with percentages recalculated from the remaining sampled pixels.
 - `--matte HEX` composites transparent and semi-transparent pixels over a chosen background color before extraction, so icons and logos can be sampled as they appear on dark, light, or brand surfaces.
-- `--cluster-distance N` optionally groups visually nearby sampled RGB colors before ranking, using a small deterministic local distance and weighted-average representative colors.
+- `--cluster-distance N` optionally groups nearby sampled colors before ranking; `--cluster-space {rgb,lab}` keeps the existing deterministic RGB-ish default or uses local sRGB-to-CIELAB conversion with Euclidean Lab distance for perceptual grouping.
 - `--sort {frequency,luminance,hue}` keeps the default frequency ranking or reorders selected swatches from dark to light or by hue angle for designer review.
 - `--precision N` formats report percentages, relative luminance values, and contrast ratios with 0 to 6 decimal places for JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries while preserving existing defaults when omitted.
 - `--label-prefix PREFIX` replaces default `color-1`, `color-2` labels with design-token labels such as `brand-1`, `brand-2` in the main image command, including `--tokens` keys.
@@ -157,6 +157,12 @@ Group nearby sampled colors before ranking:
 swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
 ```
 
+Use perceptual Lab-space clustering when small RGB channel changes do not match visual similarity:
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 5 --cluster-space lab --json photo-lab-colors.json
+```
+
 Sort selected swatches from dark to light after extraction:
 
 ```bash
@@ -237,9 +243,9 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
 
-Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` and `baseline` use shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written. Use `swatch-story presets PATH [PATH ...]` to validate one or more local presets without reading image files. The command prints each input path, `valid` status, and supported keys in sorted order, or `keys: none` for an empty preset. Add `--json PATH` to write a deterministic report after all presets validate successfully.
+Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `cluster_space`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` and `baseline` use shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written. Use `swatch-story presets PATH [PATH ...]` to validate one or more local presets without reading image files. The command prints each input path, `valid` status, and supported keys in sorted order, or `keys: none` for an empty preset. Add `--json PATH` to write a deterministic report after all presets validate successfully.
 
-The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
+The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance and space, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
 The SVG report is a standalone local swatch sheet for docs and slides. It shows the title, source filename, image dimensions, extraction settings, and one row per swatch with a color rectangle, HEX, optional approximate name, percent, luminance, black/white contrast ratios, label, and readable text color. User-derived title, source, labels, and names are XML-escaped, and the source image itself is not embedded.
 
@@ -319,7 +325,7 @@ Example palette entry:
 }
 ```
 
-Contrast ratios use the WCAG formula `(lighter + 0.05) / (darker + 0.05)` from relative luminance, comparing each swatch against black luminance `0` and white luminance `1`. `best_text_color` is the higher-contrast option. JSON settings include `cluster_distance` and the selected sort mode, for example `"cluster_distance": 0` and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels. When `--matte` is used, JSON settings include the normalized lowercase value, for example `"matte": "#111827"`; the field is omitted when the default white matte is used.
+Contrast ratios use the WCAG formula `(lighter + 0.05) / (darker + 0.05)` from relative luminance, comparing each swatch against black luminance `0` and white luminance `1`. `best_text_color` is the higher-contrast option. JSON settings include `cluster_distance`, `cluster_space`, and the selected sort mode, for example `"cluster_distance": 0`, `"cluster_space": "rgb"`, and `"sort": "frequency"`. When `--ignore-color` is used, JSON settings include the normalized lowercase value, for example `"ignore_color": "#ffffff"`. The ignored pixels are removed before optional clustering and ranking, so swatch percentages are based only on the remaining sampled pixels. When `--matte` is used, JSON settings include the normalized lowercase value, for example `"matte": "#111827"`; the field is omitted when the default white matte is used.
 
 Example compare JSON output:
 
@@ -382,7 +388,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; cluster space rgb; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | color-1 | contrast black 1.3:1 white 16.15:1 | text white
@@ -439,19 +445,20 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--sample-limit N`: target sampled pixels for the automatic step when `--sample-step` is omitted. Default: 10000. Must be 1 or greater. If `--sample-step` is provided, the fixed step controls pixel iteration; JSON settings still include the selected `sample_limit` and effective `sample_step`.
 - `--ignore-color HEX`: exclude sampled pixels that exactly match a hex RGB color before palette ranking. Accepts `#rrggbb` or `rrggbb`, case-insensitive, and stores the normalized lowercase `#rrggbb` value in JSON/report settings. If every sampled pixel is ignored or the value is not valid hex RGB, the command exits with a clear error.
 - `--matte HEX`: composite transparent or semi-transparent pixels over a hex RGB background before palette extraction. Accepts `#rrggbb` or `rrggbb`, case-insensitive. Default behavior remains white, and JSON settings include normalized `matte` only when this option is explicitly provided.
-- `--cluster-distance N`: when greater than 0, group similar sampled RGB colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
+- `--cluster-distance N`: when greater than 0, group similar sampled colors before palette ranking. The value must be from 0 to 255. Default: 0, which preserves the exact RGB bucket behavior. Cluster representatives are rounded weighted averages of member RGB values, weighted by sampled pixel counts.
+- `--cluster-space {rgb,lab}`: choose the distance space used by `--cluster-distance`. `rgb` is the default and preserves existing deterministic RGB-ish clustering. `lab` converts sRGB to XYZ and CIELAB with a D65 white point, then compares colors with Euclidean Lab distance. JSON and report settings always include the selected value, even when `--cluster-distance` is 0.
 - `--sort {frequency,luminance,hue}`: order the selected palette entries. `frequency` preserves the default ranking by sampled pixel count, `luminance` reorders swatches from dark to light, and `hue` orders chromatic swatches by HSV hue angle before grayscale or near-grayscale swatches. Reordered palettes are reranked from 1. Default: `frequency`.
 - `--precision N`: format user-facing report percentages, relative luminance values, and contrast ratios with `N` decimal places, from 0 to 6. When omitted, output preserves the existing JSON numbers and report strings. The option applies to normal palette extraction JSON, design-token JSON, CSV, Markdown, WCAG audit, text, SVG, HTML, and terminal summaries; design-tool palette formats such as CSS, GIMP `.gpl`, and Adobe `.ase` keep their format-specific output.
 - `--label-prefix PREFIX`: replace default palette labels with `PREFIX-1`, `PREFIX-2`, and so on for the main image command. `PREFIX` must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens. For example, `--label-prefix brand` writes labels such as `brand-1` into JSON, design-token JSON keys, CSV, CSS custom property names, Markdown, WCAG audit, text, HTML, SVG, GIMP `.gpl`, Adobe `.ase`, and terminal output. Compare and gallery commands do not use this option.
-- `--preset PATH`: read reusable defaults from a local JSON preset before running the main image, `compare`, `baseline`, or `batch` command. Explicit CLI flags override preset values. The preset may contain `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`; mode-specific unsupported keys are ignored rather than applied.
+- `--preset PATH`: read reusable defaults from a local JSON preset before running the main image, `compare`, `baseline`, or `batch` command. Explicit CLI flags override preset values. The preset may contain `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `cluster_space`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`; mode-specific unsupported keys are ignored rather than applied.
 - `--title TEXT`: title for design-token JSON, HTML, Markdown, WCAG audit, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. `--html PATH` writes a standalone ranked dashboard with escaped metadata and visual swatches for shared, added, removed, and changed color lists. These outputs can be requested together.
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. `--html PATH` writes a standalone ranked dashboard with escaped metadata and visual swatches for shared, added, removed, and changed color lists. These outputs can be requested together.
 
-`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands and readable sample tags. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, tags, expected dominant colors, and expected palette hex values. `--tag` may be repeated to generate only samples containing all requested tags; matching is case-insensitive, and unknown or empty-result filters fail before writing files. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 
@@ -478,7 +485,24 @@ pytest -q
 ```
 
 ## Roadmap
-- Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
+
+swatch-story is alpha-stage but usable for local, deterministic palette extraction and review reports. The project follows a small-maintenance cadence: behavior changes should land with tests, documentation translations should stay synchronized in meaning, and the roadmap should be reviewed after each feature slice or before a release tag.
+
+Now:
+- Harden clustering documentation and examples with real fixture scenarios.
+- Add schema-version notes for JSON-like outputs before downstream users depend on more fields.
+
+Next:
+- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
+- Improve gallery samples so they cover transparency, ignored backgrounds, and perceptual clustering examples.
+
+Later:
+- Consider optional machine-readable changelog metadata for release automation.
+- Evaluate config-file support only if repeated CLI presets stop covering common workflows.
+
+Completion review:
+- A roadmap item is complete only after tests, docs, translated README meaning, and release notes or changelog impact have been checked.
+- Completed items should be removed from this README roadmap and, when substantial, archived in [ROADMAP.md](ROADMAP.md) or the changelog.
 
 ## Contributing
 

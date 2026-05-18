@@ -14,6 +14,7 @@ DEFAULT_SAMPLE_LIMIT = 10_000
 MIN_CLUSTER_DISTANCE = 0
 MAX_CLUSTER_DISTANCE = 255
 VALID_SORTS = ("frequency", "luminance", "hue")
+VALID_CLUSTER_SPACES = ("rgb", "lab")
 HEX_RGB_PATTERN = re.compile(r"#?[0-9a-fA-F]{6}\Z")
 
 COMMON_COLOR_NAMES: tuple[tuple[str, tuple[int, int, int]], ...] = (
@@ -93,6 +94,12 @@ def validate_sort(sort: str) -> None:
     if sort not in VALID_SORTS:
         choices = ", ".join(VALID_SORTS)
         raise PaletteError(f"sort must be one of: {choices}")
+
+
+def validate_cluster_space(cluster_space: str) -> None:
+    if cluster_space not in VALID_CLUSTER_SPACES:
+        choices = ", ".join(VALID_CLUSTER_SPACES)
+        raise PaletteError(f"--cluster-space must be one of: {choices}")
 
 
 def normalize_ignore_color(ignore_color: str | None) -> str | None:
@@ -232,15 +239,54 @@ def perceptualish_rgb_distance(
     )
 
 
+def srgb_to_lab(rgb: tuple[int, int, int]) -> tuple[float, float, float]:
+    def linear_channel(value: int) -> float:
+        normalized = value / 255
+        if normalized <= 0.04045:
+            return normalized / 12.92
+        return ((normalized + 0.055) / 1.055) ** 2.4
+
+    red, green, blue = (linear_channel(value) for value in rgb)
+    x = (0.4124564 * red) + (0.3575761 * green) + (0.1804375 * blue)
+    y = (0.2126729 * red) + (0.7151522 * green) + (0.0721750 * blue)
+    z = (0.0193339 * red) + (0.1191920 * green) + (0.9503041 * blue)
+
+    def lab_axis(value: float) -> float:
+        if value > 0.008856:
+            return value ** (1 / 3)
+        return (7.787 * value) + (16 / 116)
+
+    fx = lab_axis(x / 0.95047)
+    fy = lab_axis(y)
+    fz = lab_axis(z / 1.08883)
+    return (116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz))
+
+
+def lab_distance(first: tuple[int, int, int], second: tuple[int, int, int]) -> float:
+    first_lab = srgb_to_lab(first)
+    second_lab = srgb_to_lab(second)
+    return sqrt(
+        sum(
+            (first_lab[index] - second_lab[index]) ** 2
+            for index in range(len(first_lab))
+        )
+    )
+
+
 def cluster_color_counts(
-    exact_counts: Counter[tuple[int, int, int]], cluster_distance: int
+    exact_counts: Counter[tuple[int, int, int]],
+    cluster_distance: int,
+    *,
+    cluster_space: str = "rgb",
 ) -> list[tuple[tuple[int, int, int], int]]:
+    validate_cluster_space(cluster_space)
+    distance = lab_distance if cluster_space == "lab" else perceptualish_rgb_distance
     clusters: list[ColorCluster] = []
     sorted_counts = sorted(exact_counts.items(), key=lambda item: (-item[1], item[0]))
     for rgb, count in sorted_counts:
         candidates = [
             (
-                perceptualish_rgb_distance(rgb, cluster.representative),
+                distance(rgb, cluster.representative),
                 cluster.representative,
                 index,
             )
@@ -271,10 +317,12 @@ def extract_palette(
     ignore_color: str | None = None,
     matte: str | None = None,
     cluster_distance: int = 0,
+    cluster_space: str = "rgb",
 ) -> list[PaletteEntry]:
     validate_color_count(colors)
     validate_sample_limit(sample_limit)
     validate_cluster_distance(cluster_distance)
+    validate_cluster_space(cluster_space)
     normalized_ignore_color = normalize_ignore_color(ignore_color)
     normalized_matte = normalize_matte(matte)
     matte_rgb = hex_to_rgb(normalized_matte) if normalized_matte is not None else None
@@ -322,7 +370,12 @@ def extract_palette(
                 f"{normalized_ignore_color}"
             )
 
-    return build_palette(sampled, colors, cluster_distance=cluster_distance)
+    return build_palette(
+        sampled,
+        colors,
+        cluster_distance=cluster_distance,
+        cluster_space=cluster_space,
+    )
 
 
 def composite_over_white(rgba: tuple[int, int, int, int]) -> tuple[int, int, int]:
@@ -344,13 +397,22 @@ def composite_rgba(
 
 
 def build_palette(
-    sampled: list[tuple[int, int, int]], colors: int, *, cluster_distance: int = 0
+    sampled: list[tuple[int, int, int]],
+    colors: int,
+    *,
+    cluster_distance: int = 0,
+    cluster_space: str = "rgb",
 ) -> list[PaletteEntry]:
     validate_cluster_distance(cluster_distance)
+    validate_cluster_space(cluster_space)
     exact_counts = Counter(sampled)
     if cluster_distance > 0:
         ranked = sorted(
-            cluster_color_counts(exact_counts, cluster_distance),
+            cluster_color_counts(
+                exact_counts,
+                cluster_distance,
+                cluster_space=cluster_space,
+            ),
             key=lambda item: (-item[1], item[0]),
         )
     elif len(exact_counts) <= colors:
@@ -421,10 +483,12 @@ def summarize_image(
     ignore_color: str | None = None,
     matte: str | None = None,
     cluster_distance: int = 0,
+    cluster_space: str = "rgb",
     sort: str = "frequency",
 ) -> dict[str, Any]:
     validate_sample_limit(sample_limit)
     validate_cluster_distance(cluster_distance)
+    validate_cluster_space(cluster_space)
     validate_sort(sort)
     normalized_ignore_color = normalize_ignore_color(ignore_color)
     normalized_matte = normalize_matte(matte)
@@ -456,6 +520,7 @@ def summarize_image(
         ignore_color=normalized_ignore_color,
         matte=normalized_matte,
         cluster_distance=cluster_distance,
+        cluster_space=cluster_space,
     )
     entries = [entry.to_dict() for entry in sort_palette(palette, sort)]
     if include_color_names:
@@ -466,6 +531,7 @@ def summarize_image(
         "sample_step": effective_sample_step,
         "sample_limit": sample_limit,
         "cluster_distance": cluster_distance,
+        "cluster_space": cluster_space,
         "sort": sort,
         "color_names": include_color_names,
     }

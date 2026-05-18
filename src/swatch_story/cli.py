@@ -32,6 +32,7 @@ from swatch_story.palette import (
     MAX_COLORS,
     MIN_CLUSTER_DISTANCE,
     MIN_COLORS,
+    VALID_CLUSTER_SPACES,
     VALID_SORTS,
     PaletteError,
     normalize_ignore_color,
@@ -64,6 +65,7 @@ PRESET_KEYS = {
     "ignore_color",
     "matte",
     "cluster_distance",
+    "cluster_space",
     "sort",
     "names",
     "precision",
@@ -78,6 +80,7 @@ SHARED_PRESET_KEYS = {
     "ignore_color",
     "matte",
     "cluster_distance",
+    "cluster_space",
     "sort",
     "names",
 }
@@ -447,6 +450,12 @@ def add_palette_options(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--cluster-space",
+        choices=VALID_CLUSTER_SPACES,
+        default="rgb",
+        help=("Color space used by --cluster-distance: rgb or lab. Default: rgb."),
+    )
+    parser.add_argument(
         "--sort",
         choices=VALID_SORTS,
         default="frequency",
@@ -491,6 +500,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ignore_color=args.ignore_color,
             matte=args.matte,
             cluster_distance=args.cluster_distance,
+            cluster_space=args.cluster_space,
             sort=args.sort,
         )
     except PaletteError as exc:
@@ -637,6 +647,13 @@ def validate_preset_value(
             return sample_limit
         if key == "cluster_distance":
             return cluster_distance_value(str(int_preset_value(key, value)))
+        if key == "cluster_space":
+            if not isinstance(value, str) or value not in VALID_CLUSTER_SPACES:
+                choices = ", ".join(VALID_CLUSTER_SPACES)
+                raise argparse.ArgumentTypeError(
+                    f"--cluster-space must be one of: {choices}"
+                )
+            return value
         if key == "precision":
             if value is None:
                 return None
@@ -795,6 +812,7 @@ def batch_main(argv: Sequence[str]) -> int:
                 ignore_color=args.ignore_color,
                 matte=args.matte,
                 cluster_distance=args.cluster_distance,
+                cluster_space=args.cluster_space,
                 sort=args.sort,
             )
             for image in args.images
@@ -850,6 +868,7 @@ def baseline_main(argv: Sequence[str]) -> int:
             ignore_color=args.ignore_color,
             matte=args.matte,
             cluster_distance=args.cluster_distance,
+            cluster_space=args.cluster_space,
             sort=args.sort,
         )
         candidate_summaries = [
@@ -862,6 +881,7 @@ def baseline_main(argv: Sequence[str]) -> int:
                 ignore_color=args.ignore_color,
                 matte=args.matte,
                 cluster_distance=args.cluster_distance,
+                cluster_space=args.cluster_space,
                 sort=args.sort,
             )
             for image in args.candidate_images
@@ -914,6 +934,7 @@ def compare_main(argv: Sequence[str]) -> int:
             ignore_color=args.ignore_color,
             matte=args.matte,
             cluster_distance=args.cluster_distance,
+            cluster_space=args.cluster_space,
             sort=args.sort,
         )
         after_summary = summarize_image(
@@ -925,6 +946,7 @@ def compare_main(argv: Sequence[str]) -> int:
             ignore_color=args.ignore_color,
             matte=args.matte,
             cluster_distance=args.cluster_distance,
+            cluster_space=args.cluster_space,
             sort=args.sort,
         )
     except PaletteError as exc:

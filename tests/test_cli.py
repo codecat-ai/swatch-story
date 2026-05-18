@@ -223,6 +223,7 @@ def test_cli_main_reads_preset_and_cli_colors_override_wins(
                 "colors": 2,
                 "sample_step": 1,
                 "matte": "000000",
+                "cluster_space": "lab",
                 "names": True,
                 "precision": 1,
                 "label_prefix": "brand",
@@ -253,6 +254,7 @@ def test_cli_main_reads_preset_and_cli_colors_override_wins(
     assert summary["settings"]["colors"] == 3
     assert summary["settings"]["sample_step"] == 1
     assert summary["settings"]["matte"] == "#000000"
+    assert summary["settings"]["cluster_space"] == "lab"
     assert summary["settings"]["color_names"] is True
     assert [entry["label"] for entry in summary["palette"]] == [
         "brand-1",
@@ -1691,6 +1693,46 @@ def test_cli_cluster_distance_updates_palette_json_and_console(
     assert "#656464" in capsys.readouterr().out
 
 
+def test_cli_cluster_space_lab_updates_palette_json_and_console(
+    tmp_path: Path, capsys
+) -> None:
+    image_path = tmp_path / "cli-lab-cluster.png"
+    image = Image.new("RGB", (4, 1))
+    image.putdata(
+        [
+            (30, 80, 200),
+            (30, 80, 200),
+            (44, 77, 196),
+            (255, 0, 0),
+        ]
+    )
+    image.save(image_path)
+    json_path = tmp_path / "story.json"
+
+    exit_code = main(
+        [
+            str(image_path),
+            "--colors",
+            "3",
+            "--sample-step",
+            "1",
+            "--cluster-distance",
+            "5",
+            "--cluster-space",
+            "lab",
+            "--json",
+            str(json_path),
+        ]
+    )
+
+    assert exit_code == 0
+    summary = json.loads(json_path.read_text(encoding="utf-8"))
+    assert summary["settings"]["cluster_distance"] == 5
+    assert summary["settings"]["cluster_space"] == "lab"
+    assert [entry["hex"] for entry in summary["palette"]] == ["#234fc7", "#ff0000"]
+    assert "#234fc7" in capsys.readouterr().out
+
+
 def test_cli_sort_luminance_updates_json_and_console_order(
     tmp_path: Path, capsys
 ) -> None:
@@ -1747,6 +1789,17 @@ def test_cli_rejects_invalid_sort_choice(tmp_path: Path, capsys) -> None:
 
     assert exc_info.value.code == 2
     assert "invalid choice: 'brightness'" in capsys.readouterr().err
+
+
+def test_cli_rejects_invalid_cluster_space_choice(tmp_path: Path, capsys) -> None:
+    image_path = tmp_path / "cli.png"
+    Image.new("RGB", (1, 1), (0, 0, 0)).save(image_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([str(image_path), "--cluster-space", "hsl"])
+
+    assert exc_info.value.code == 2
+    assert "invalid choice: 'hsl'" in capsys.readouterr().err
 
 
 def test_cli_rejects_invalid_cluster_distance_with_argparse(
@@ -2005,7 +2058,8 @@ def test_cli_writes_text_report_and_prints_summary(tmp_path: Path, capsys) -> No
     assert "Source: cli.png\n" in text
     assert (
         "Settings: colors 2; sample step 1; sample limit 10000; "
-        "cluster distance 0; sort frequency; ignored color none; names included\n"
+        "cluster distance 0; cluster space rgb; sort frequency; "
+        "ignored color none; names included\n"
     ) in text
     assert (
         "1. #0000ff | rgb(0, 0, 255) | 50.0% | color-1 | "

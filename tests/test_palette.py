@@ -92,6 +92,61 @@ def test_extract_palette_clusters_nearby_colors_when_distance_permits(
     assert [entry.percent for entry in palette] == [75.0, 25.0]
 
 
+def test_extract_palette_lab_space_clusters_visually_similar_blues(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "lab-cluster.png"
+    save_blocks(
+        image_path,
+        [
+            (30, 80, 200),
+            (30, 80, 200),
+            (44, 77, 196),
+            (255, 0, 0),
+        ],
+    )
+
+    palette = extract_palette(
+        image_path,
+        colors=3,
+        sample_step=1,
+        cluster_distance=5,
+        cluster_space="lab",
+    )
+
+    assert [entry.rgb for entry in palette] == [(35, 79, 199), (255, 0, 0)]
+    assert [entry.count for entry in palette] == [3, 1]
+
+
+def test_extract_palette_rgb_space_remains_default_for_same_threshold(
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "rgb-default.png"
+    save_blocks(
+        image_path,
+        [
+            (30, 80, 200),
+            (30, 80, 200),
+            (44, 77, 196),
+            (255, 0, 0),
+        ],
+    )
+
+    palette = extract_palette(
+        image_path,
+        colors=3,
+        sample_step=1,
+        cluster_distance=5,
+    )
+
+    assert [entry.rgb for entry in palette] == [
+        (30, 80, 200),
+        (44, 77, 196),
+        (255, 0, 0),
+    ]
+    assert [entry.count for entry in palette] == [2, 1, 1]
+
+
 def test_extract_palette_does_not_cluster_below_threshold(tmp_path: Path) -> None:
     image_path = tmp_path / "below-threshold.png"
     save_blocks(
@@ -300,6 +355,7 @@ def test_summarize_image_has_expected_json_shape(tmp_path: Path) -> None:
     assert summary["settings"]["sample_limit"] == 10_000
     assert summary["settings"]["sort"] == "frequency"
     assert summary["settings"]["cluster_distance"] == 0
+    assert summary["settings"]["cluster_space"] == "rgb"
     assert summary["palette"][0].keys() == {
         "rank",
         "hex",
@@ -478,6 +534,7 @@ def test_summarize_image_clustered_palette_keeps_sort_and_names(
     )
 
     assert summary["settings"]["cluster_distance"] == 8
+    assert summary["settings"]["cluster_space"] == "rgb"
     assert [entry["hex"] for entry in summary["palette"]] == ["#fc0100", "#0000fc"]
     assert [entry["count"] for entry in summary["palette"]] == [3, 2]
     assert [entry["percent"] for entry in summary["palette"]] == [60.0, 40.0]
