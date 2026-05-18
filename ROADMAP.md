@@ -9,7 +9,7 @@ swatch-story is alpha-stage but usable for local, deterministic palette extracti
 ## Now
 
 - Harden clustering documentation and examples with real fixture scenarios.
-- Add schema-version notes for JSON-like outputs before downstream users depend on more fields.
+- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
 
 ## Next
 

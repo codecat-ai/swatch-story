@@ -9,6 +9,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+JSON_SCHEMA_VERSION = 1
+
 
 def write_json_report(
     summary: dict[str, Any], output_path: str | Path, *, precision: int | None = None
@@ -16,6 +18,7 @@ def write_json_report(
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     report_summary = _summary_with_precision(summary, precision)
+    report_summary = {"schema_version": JSON_SCHEMA_VERSION, **report_summary}
     path.write_text(
         json.dumps(report_summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
