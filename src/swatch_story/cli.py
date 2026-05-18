@@ -309,6 +309,22 @@ def build_gallery_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_presets_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="swatch-story presets",
+        description=(
+            "List and validate local JSON preset files before a review session."
+        ),
+    )
+    parser.add_argument("preset_paths", nargs="+", help="Local JSON preset paths")
+    parser.add_argument(
+        "--json",
+        dest="json_path",
+        help="Write preset validation JSON report to PATH",
+    )
+    return parser
+
+
 def build_batch_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="swatch-story batch",
@@ -452,6 +468,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return compare_main(argv[1:])
     if argv[:1] == ["gallery"]:
         return gallery_main(argv[1:])
+    if argv[:1] == ["presets"]:
+        return presets_main(argv[1:])
     if argv[:1] == ["batch"]:
         return batch_main(argv[1:])
     if argv[:1] == ["baseline"]:
@@ -711,6 +729,49 @@ def gallery_main(argv: Sequence[str]) -> int:
         f"Wrote sample fixture gallery to {Path(args.output_dir)} "
         f"({len(written)} files)"
     )
+    return 0
+
+
+def presets_main(argv: Sequence[str]) -> int:
+    parser = build_presets_parser()
+    args = parser.parse_args(argv)
+
+    records = []
+    for preset_path in args.preset_paths:
+        preset = load_preset(parser, preset_path)
+        keys = sorted(preset)
+        records.append(
+            {
+                "display_path": preset_path,
+                "path": str(Path(preset_path).resolve()),
+                "valid": True,
+                "keys": keys,
+            }
+        )
+
+    print("Preset validation summary")
+    for record in records:
+        keys = ", ".join(record["keys"]) if record["keys"] else "none"
+        print(f"- {record['display_path']}: valid; keys: {keys}")
+
+    if args.json_path:
+        report = {
+            "schema": "swatch-story.presets",
+            "version": 1,
+            "presets": [
+                {
+                    "path": record["path"],
+                    "valid": record["valid"],
+                    "keys": record["keys"],
+                }
+                for record in records
+            ],
+        }
+        Path(args.json_path).write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
     return 0
 
 

@@ -36,6 +36,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 - Palette comparison reports for two local images with dominant-color changes, compact side-by-side HTML palette preview strips, shared, added, and removed palette colors, and a deterministic overlap-based drift score in terminal, JSON, standalone HTML, portable Markdown, or plain-text output.
 - Baseline drift reviews that compare one reference image against multiple candidates, rank candidates by drift score, and write deterministic JSON, Markdown, plain-text, and standalone HTML dashboard reports.
 - Batch team-review reports that combine two or more local image audits into one deterministic Markdown and/or standalone HTML file with one section/card per image, dominant colors, palette rows, contrast guidance, escaped user-derived values, and shared extraction settings.
+- Preset discovery for local JSON preset files, with deterministic terminal validation summaries and optional JSON reports for team review setup.
 - Source-checkout sample fixture gallery generation with tiny deterministic PNGs, stable lesson-theme tags, an optional Markdown index, and an optional JSON manifest for teaching palette extraction and fixture assertions.
 
 ## Installation
@@ -204,6 +205,12 @@ Reuse a local JSON extraction preset while letting explicit CLI flags win:
 swatch-story poster.png --preset presets/poster.json --colors 6 --json poster-colors.json --tokens poster.tokens.json
 ```
 
+Validate shared presets before a review session:
+
+```bash
+swatch-story presets presets/poster.json presets/baseline.json --json preset-validation.json
+```
+
 Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text drift reports:
 
 ```bash
@@ -230,7 +237,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
 
-Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` and `baseline` use shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written.
+Preset files are local JSON objects for sharing deterministic extraction defaults across commands. Accepted keys are `colors`, `sample_step`, `sample_limit`, `ignore_color`, `matte`, `cluster_distance`, `sort`, `names`, `precision`, `label_prefix`, `title`, and `min_delta_percent`. The main image command uses extraction settings plus `names`, `precision`, `label_prefix`, and `title`; `compare` and `baseline` use shared extraction settings plus `names`, `precision`, `title`, and `min_delta_percent`; `batch` uses shared extraction settings plus `names`, `precision`, and `title`. A flag typed on the command line always overrides the preset value. Presets must be local files; URLs, missing files, invalid JSON, non-object JSON, unknown keys, and invalid values fail before reports are written. Use `swatch-story presets PATH [PATH ...]` to validate one or more local presets without reading image files. The command prints each input path, `valid` status, and supported keys in sorted order, or `keys: none` for an empty preset. Add `--json PATH` to write a deterministic report after all presets validate successfully.
 
 The HTML report is a browser-friendly contact sheet. It shows the image name and path, dimensions, requested color count, effective sampling step, cluster distance, sort mode, whether approximate names were included, a short summary, and one card per swatch with HEX, RGB, relative luminance, black/white contrast ratios, readable text color, and contrast guidance. Add `--html-thumbnail PATH` with `--html PATH` to generate a bounded local thumbnail from the source image and link it with a relative path where practical; the source image is not embedded as base64.
 
@@ -448,6 +455,8 @@ With `--names`, palette entries include an extra approximate common-name hint:
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` writes the built-in sample fixture PNGs and, by default, a Markdown `README.md` gallery with source-checkout commands and readable sample tags. `--manifest` also writes a deterministic UTF-8 `manifest.json` containing schema version `1`, generator name, sample filenames, dimensions, stories, tags, expected dominant colors, and expected palette hex values. `--tag` may be repeated to generate only samples containing all requested tags; matching is case-insensitive, and unknown or empty-result filters fail before writing files. `--no-index` skips only `README.md`, so it can be combined with `--manifest`. The command refuses to overwrite existing gallery files, including `manifest.json`, unless `--force` is provided.
 
+`swatch-story presets PATH [PATH ...] [--json PATH]` validates local JSON preset files with the same rules as `--preset` and does not read any image files. The terminal summary preserves input order, reports normalized supported keys in sorted order, and shows `keys: none` for presets with no supported keys. `--json PATH` writes schema marker `swatch-story.presets`, version `1`, normalized absolute preset paths, validity, and sorted keys only after every input preset validates.
+
 The MVP does not read a config file and does not fetch remote images.
 
 ## Development
@@ -462,7 +471,7 @@ python -m build
 
 ## Testing
 
-The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, single-image, compare, baseline, and batch report rendering, design-token JSON output, gallery manifest content, escaping of user-derived report values, and CLI file output.
+The test suite builds tiny synthetic images and verifies palette proportions, contrast text choices, single-image, compare, baseline, and batch report rendering, design-token JSON output, preset discovery validation, gallery manifest content, escaping of user-derived report values, and CLI file output.
 
 ```bash
 pytest -q
@@ -470,7 +479,6 @@ pytest -q
 
 ## Roadmap
 - Optional perceptual color-space clustering based on a more formal color model such as CIELAB for closer visual grouping.
-- Optional preset discovery command that lists and validates team preset files before a review session.
 
 ## Contributing
 

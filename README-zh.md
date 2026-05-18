@@ -37,6 +37,7 @@
 - 两张本地图像的调色板对比报告，包含主色变化、紧凑的 HTML 并排调色板预览条、共有颜色、新增颜色、移除颜色，以及基于重叠度的确定性漂移分数，并可输出到终端、JSON、独立 HTML、便携 Markdown 或纯文本。
 - 基准漂移审阅可以把一张参考图像与多个候选图像对比，按漂移分数排序，并写入确定性的 JSON、Markdown、纯文本和独立 HTML 仪表盘报告。
 - 批量团队审阅报告可把两张或更多本地图像审计合并为一个确定性的 Markdown 和/或独立 HTML 文件；每张图片都有一个章节/卡片，包含主色、调色板行、对比度建议、已转义的用户来源值和共享提取设置。
+- 本地 JSON 预设发现可为团队审阅准备输出确定性的终端验证摘要，并可选写入 JSON 报告。
 - 源码检出环境中的示例素材库生成，可以写入小型确定性 PNG、稳定的课程主题标签、可选 Markdown 索引和可选 JSON 清单，用于教学调色板提取和素材断言。
 
 ## 安装
@@ -205,6 +206,12 @@ swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.j
 swatch-story poster.png --preset presets/poster.json --colors 6 --json poster-colors.json --tokens poster.tokens.json
 ```
 
+在审阅会话前验证共享预设：
+
+```bash
+swatch-story presets presets/poster.json presets/baseline.json --json preset-validation.json
+```
+
 对比两张本地图像，并写入 JSON、CSV、HTML、Markdown 和纯文本漂移报告：
 
 ```bash
@@ -231,7 +238,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 `batch` 命令要求至少两个图像路径，并且至少提供 `--markdown PATH` 或 `--html PATH` 之一；两个输出可以同时请求。它会对每张图片复用相同的确定性调色板提取设置，并为每个来源图像写入一个 Markdown 章节或 HTML 卡片，包含来源名称/路径、图像尺寸、主色、调色板行/卡片，以及黑/白文字对比度建议。用户来源的标题、文件名、路径、标签和名称都会被转义，文件以确定性 UTF-8 写入。
 
-预设文件是本地 JSON 对象，用于在命令之间共享确定性的抽取默认值。可接受的键包括 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`。主图像命令使用抽取设置以及 `names`、`precision`、`label_prefix`、`title`；`compare` 和 `baseline` 使用共享抽取设置以及 `names`、`precision`、`title`、`min_delta_percent`；`batch` 使用共享抽取设置以及 `names`、`precision`、`title`。命令行上输入的标志始终覆盖预设值。预设必须是本地文件；URL、缺失文件、无效 JSON、非对象 JSON、未知键和无效值都会在写入报告前失败。
+预设文件是本地 JSON 对象，用于在命令之间共享确定性的抽取默认值。可接受的键包括 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`。主图像命令使用抽取设置以及 `names`、`precision`、`label_prefix`、`title`；`compare` 和 `baseline` 使用共享抽取设置以及 `names`、`precision`、`title`、`min_delta_percent`；`batch` 使用共享抽取设置以及 `names`、`precision`、`title`。命令行上输入的标志始终覆盖预设值。预设必须是本地文件；URL、缺失文件、无效 JSON、非对象 JSON、未知键和无效值都会在写入报告前失败。使用 `swatch-story presets PATH [PATH ...]` 可以在不读取图像文件的情况下验证一个或多个本地预设。该命令会打印每个输入路径、`valid` 状态和按顺序排序的受支持键；空预设会显示 `keys: none`。添加 `--json PATH` 可在所有预设验证成功后写入确定性报告。
 
 HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。把 `--html-thumbnail PATH` 与 `--html PATH` 一起使用时，会从源图片生成一个有尺寸上限的本地缩略图，并尽量用相对路径链接；源图片不会以 base64 嵌入。
 
@@ -451,6 +458,8 @@ Drift score: 66.67%
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令和可读示例标签的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、标签、预期主色和预期调色板十六进制值。`--tag` 可以重复使用，只生成包含所有请求标签的示例；匹配不区分大小写，未知标签或无匹配结果会在写入文件前失败。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 
+`swatch-story presets PATH [PATH ...] [--json PATH]` 会使用与 `--preset` 相同的规则验证本地 JSON 预设文件，并且不会读取任何图像文件。终端摘要保持输入顺序，报告按字母排序的受支持键，并为没有受支持键的预设显示 `keys: none`。`--json PATH` 只会在每个输入预设都验证成功后写入 schema 标记 `swatch-story.presets`、版本 `1`、规范化的绝对预设路径、有效性和排序后的键。
+
 MVP 不读取配置文件，也不会获取远程图片。
 
 ## 开发
@@ -465,7 +474,7 @@ python -m build
 
 ## 测试
 
-测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、单图/对比/基准/批量报告渲染、设计令牌 JSON 输出、gallery 清单内容、用户来源报告值的转义和 CLI 文件输出。
+测试套件会构建小型合成图像，并验证调色板占比、对比度文字选择、单图/对比/基准/批量报告渲染、设计令牌 JSON 输出、预设发现验证、gallery 清单内容、用户来源报告值的转义和 CLI 文件输出。
 
 ```bash
 pytest -q
@@ -473,7 +482,6 @@ pytest -q
 
 ## 路线图
 - 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
-- 可选的预设发现命令，用于在审阅会话前列出并验证团队预设文件。
 
 ## 贡献
 

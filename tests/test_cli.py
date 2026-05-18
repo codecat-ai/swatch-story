@@ -795,6 +795,121 @@ def test_cli_rejects_non_local_or_missing_preset_before_writing_outputs(
     assert not json_path.exists()
 
 
+def test_cli_presets_lists_valid_presets_in_input_order(tmp_path: Path, capsys) -> None:
+    first_preset = tmp_path / "first.json"
+    second_preset = tmp_path / "second.json"
+    first_preset.write_text(
+        json.dumps({"sort": "hue", "colors": 4, "names": True}),
+        encoding="utf-8",
+    )
+    second_preset.write_text(
+        json.dumps({"title": "Review", "sample_step": 2}),
+        encoding="utf-8",
+    )
+
+    exit_code = main(["presets", str(first_preset), str(second_preset)])
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == (
+        "Preset validation summary\n"
+        f"- {first_preset}: valid; keys: colors, names, sort\n"
+        f"- {second_preset}: valid; keys: sample_step, title\n"
+    )
+
+
+def test_cli_presets_writes_json_report(tmp_path: Path, capsys) -> None:
+    first_preset = tmp_path / "first.json"
+    second_preset = tmp_path / "second.json"
+    json_path = tmp_path / "presets-report.json"
+    first_preset.write_text(json.dumps({"precision": 2}), encoding="utf-8")
+    second_preset.write_text(
+        json.dumps({"names": False, "colors": 3}), encoding="utf-8"
+    )
+
+    exit_code = main(
+        ["presets", str(first_preset), str(second_preset), "--json", str(json_path)]
+    )
+
+    assert exit_code == 0
+    assert "Preset validation summary" in capsys.readouterr().out
+    assert json.loads(json_path.read_text(encoding="utf-8")) == {
+        "schema": "swatch-story.presets",
+        "version": 1,
+        "presets": [
+            {
+                "path": str(first_preset.resolve()),
+                "valid": True,
+                "keys": ["precision"],
+            },
+            {
+                "path": str(second_preset.resolve()),
+                "valid": True,
+                "keys": ["colors", "names"],
+            },
+        ],
+    }
+
+
+def test_cli_presets_reports_empty_object_with_no_keys(tmp_path: Path, capsys) -> None:
+    preset_path = tmp_path / "empty.json"
+    preset_path.write_text("{}", encoding="utf-8")
+
+    exit_code = main(["presets", str(preset_path)])
+
+    assert exit_code == 0
+    assert capsys.readouterr().out == (
+        f"Preset validation summary\n- {preset_path}: valid; keys: none\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("preset_content", "expected"),
+    [
+        ("{", "invalid preset JSON"),
+        ('{"unexpected": true}', "unknown preset key: unexpected"),
+    ],
+)
+def test_cli_presets_rejects_invalid_file_before_writing_json(
+    tmp_path: Path, capsys, preset_content: str, expected: str
+) -> None:
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(preset_content, encoding="utf-8")
+    json_path = tmp_path / "presets-report.json"
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["presets", str(preset_path), "--json", str(json_path)])
+
+    assert exc_info.value.code == 2
+    assert expected in capsys.readouterr().err
+    assert not json_path.exists()
+
+
+def test_cli_presets_rejects_missing_file_before_writing_json(
+    tmp_path: Path, capsys
+) -> None:
+    json_path = tmp_path / "presets-report.json"
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["presets", str(tmp_path / "missing.json"), "--json", str(json_path)])
+
+    assert exc_info.value.code == 2
+    assert "preset file not found" in capsys.readouterr().err
+    assert not json_path.exists()
+
+
+def test_cli_presets_reads_args_from_sys_argv(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    preset_path = tmp_path / "preset.json"
+    preset_path.write_text(json.dumps({"colors": 3}), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["swatch-story", "presets", str(preset_path)])
+
+    exit_code = main()
+
+    assert exit_code == 0
+    assert f"- {preset_path}: valid; keys: colors\n" in capsys.readouterr().out
+
+
 def test_cli_gallery_writes_samples_and_index(tmp_path: Path, capsys) -> None:
     gallery_dir = tmp_path / "gallery"
 

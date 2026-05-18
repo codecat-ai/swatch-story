@@ -37,6 +37,7 @@
 - 2 枚のローカル画像向けのパレット比較レポートで、主要色の変化、コンパクトな HTML 横並びパレットプレビュー、共有色、追加色、削除色、重なりに基づく決定的なドリフトスコアを、ターミナル、JSON、単体 HTML、ポータブル Markdown、プレーンテキストで確認できます。
 - ベースラインドリフトレビューでは、1 枚の参照画像を複数の候補画像と比較し、ドリフトスコアで順位付けし、決定的な JSON、Markdown、プレーンテキスト、単体 HTML ダッシュボードレポートを書き出せます。
 - 2 枚以上のローカル画像監査を、画像ごとのセクション/カード、主要色、パレット行、コントラスト指針、エスケープ済みユーザー由来値、共通抽出設定を含む決定的な Markdown または単体 HTML のチームレビューレポートにまとめられます。
+- ローカル JSON プリセット検出により、チームレビュー準備向けの決定的なターミナル検証要約と任意の JSON レポートを作成できます。
 - ソースチェックアウト内で、小さな決定的 PNG、安定した授業テーマタグ、任意の Markdown 索引、任意の JSON マニフェストを含むサンプル素材ギャラリーを生成し、パレット抽出の教材や素材の検証に使えます。
 
 ## インストール
@@ -199,6 +200,12 @@ swatch-story poster.png --colors 5 --label-prefix brand --tokens poster.tokens.j
 swatch-story poster.png --preset presets/poster.json --colors 6 --json poster-colors.json --tokens poster.tokens.json
 ```
 
+レビューセッション前に共有プリセットを検証します。
+
+```bash
+swatch-story presets presets/poster.json presets/baseline.json --json preset-validation.json
+```
+
 2 枚のローカル画像を比較し、JSON、CSV、HTML、Markdown、プレーンテキストのドリフトレポートを書き出します。
 
 ```bash
@@ -225,7 +232,7 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 `batch` コマンドには少なくとも 2 つの画像パスと、`--markdown PATH` または `--html PATH` の少なくとも一方が必要です。両方の出力を同時に指定できます。すべての画像に同じ決定的なパレット抽出設定を適用し、各ソース画像についてソース名/パス、画像サイズ、主要色、パレット行/カード、黒/白文字のコントラスト指針を含む Markdown セクションまたは HTML カードを書き出します。ユーザー由来のタイトル、ファイル名、パス、ラベル、名前はエスケープされ、ファイルは決定的な UTF-8 として書き込まれます。
 
-プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` と `baseline` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。
+プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` と `baseline` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。`swatch-story presets PATH [PATH ...]` を使うと、画像ファイルを読まずに 1 つ以上のローカルプリセットを検証できます。このコマンドは各入力パス、`valid` ステータス、ソート済みの対応キーを表示し、空のプリセットでは `keys: none` と表示します。`--json PATH` を追加すると、すべてのプリセットが検証に成功した後で決定的なレポートを書き出します。
 
 HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
 
@@ -449,6 +456,8 @@ Drift score: 66.67%
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドと読みやすいサンプルタグを含む Markdown `README.md` gallery も生成します。`--manifest` は、schema version `1`、generator 名、サンプルファイル名、寸法、ストーリー、タグ、期待される主要色、期待されるパレット HEX 値を含む決定的な UTF-8 `manifest.json` も書き出します。`--tag` は繰り返し指定でき、要求したタグをすべて含むサンプルだけを生成します。照合は大文字小文字を区別せず、不明なタグや一致しないフィルターはファイルを書き出す前に失敗します。`--no-index` は `README.md` だけを省略するため、`--manifest` と組み合わせられます。`--force` がない限り、`manifest.json` を含む既存の gallery ファイルは上書きしません。
 
+`swatch-story presets PATH [PATH ...] [--json PATH]` は、`--preset` と同じルールでローカル JSON プリセットファイルを検証し、画像ファイルは読みません。ターミナル要約は入力順を保ち、対応キーをソートして表示し、対応キーがないプリセットには `keys: none` を表示します。`--json PATH` は、すべての入力プリセットが検証に成功した場合にだけ、schema マーカー `swatch-story.presets`、version `1`、正規化された絶対プリセットパス、有効性、ソート済みキーを書き出します。
+
 MVP は設定ファイルを読み込まず、リモート画像の取得もしません。
 
 ## 開発
@@ -463,7 +472,7 @@ python -m build
 
 ## テスト
 
-テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、単一画像/比較/ベースライン/batch レポート描画、デザイントークン JSON 出力、gallery マニフェスト内容、ユーザー由来レポート値のエスケープ、CLI ファイル出力を検証します。
+テストスイートは小さな合成画像を作り、パレット比率、コントラスト用テキスト色、単一画像/比較/ベースライン/batch レポート描画、デザイントークン JSON 出力、プリセット検出検証、gallery マニフェスト内容、ユーザー由来レポート値のエスケープ、CLI ファイル出力を検証します。
 
 ```bash
 pytest -q
@@ -471,7 +480,6 @@ pytest -q
 
 ## ロードマップ
 - CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
-- レビューセッション前にチームプリセットファイルを一覧表示して検証する任意のプリセット検出コマンド。
 
 ## コントリビュート
 
