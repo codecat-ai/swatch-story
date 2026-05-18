@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Added root `schema_version: 1` metadata to deterministic JSON reports so downstream report consumers can track output shape changes.
 - Added `--ignore-color HEX` to exclude exact RGB matches before palette ranking, normalize accepted `#rrggbb`/`rrggbb` values in settings, recalculate percentages from remaining sampled pixels, and report clear errors for invalid or fully ignored samples.
 - Added deterministic Adobe Swatch Exchange `.ase` palette export with `--ase PATH`, title-based groups, RGB swatches, and optional `--names` labels for common design-tool palette imports.
 - Added deterministic GIMP `.gpl` palette export with `--gpl PATH`, whitespace-collapsed titles, and optional `--names` labels for design-tool interoperability.

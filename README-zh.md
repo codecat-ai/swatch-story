@@ -12,7 +12,7 @@
 ## 功能
 
 - 使用 Pillow 从本地图像文件中进行确定性的调色板提取。
-- JSON 输出包含源文件名、源文件路径、图像尺寸、提取设置、颜色排名、十六进制颜色、RGB、数量、占比、相对亮度、黑/白文字对比度、可读文字选择以及稳定的令牌标签。
+- JSON 输出包含稳定的 `schema_version: 1`、源文件名、源路径、图像尺寸、提取设置、颜色排名、十六进制、RGB、计数、百分比、相对亮度、黑/白文本对比度、可读文本颜色选择和稳定的令牌标签。
 - 主图像命令可输出设计令牌 JSON，包含 Design Tokens Community Group schema 元数据、稳定的颜色令牌键、`$type: color`、`$value`、可读对比度说明，以及适合令牌流水线使用的 `extensions.swatchStory` 指标。
 - UTF-8 CSV 输出提供稳定列，便于在电子表格中排序、筛选，也适合轻量数据流程。
 - CSS 自定义属性输出包含十六进制颜色、RGB 三元组、黑/白对比度和可读文字颜色变量。
@@ -457,9 +457,9 @@ Drift score: 66.67%
 - `--title TEXT`：设计令牌 JSON、HTML、Markdown、WCAG 审计、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入带根级 `schema_version: 1` 的确定性对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含 schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。`--html PATH` 会写入独立排名仪表盘，其中包含已转义的元数据，以及共有、新增、移除和变化颜色列表的可视色块。这些输出可以同时请求。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含根级 `schema_version: 1`、schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。`--html PATH` 会写入独立排名仪表盘，其中包含已转义的元数据，以及共有、新增、移除和变化颜色列，方便浏览器审阅。
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` 会在每张图片上复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision` 和 `--title`。它要求至少两个图像路径和至少一个输出路径。`--markdown PATH` 会写入确定性的 UTF-8 团队审阅 Markdown 报告，`--html PATH` 会写入独立 HTML 团队审阅报告；两者可以同时请求。批量模式不使用 `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase` 或 `--html-thumbnail`。
 
@@ -493,11 +493,10 @@ swatch-story 仍处于 alpha 阶段，但已经可用于本地、确定性的调
 
 现在：
 - 用真实素材场景补强聚类文档和示例。
-- 在下游用户依赖更多字段前，为 JSON 类输出补充 schema 版本说明。
+- 为 compare、baseline 和 batch 流程中的 Lab 聚类添加轻量级报告夹具快照。
 
 下一步：
-- 为 compare、baseline 和 batch 流程中的 Lab 聚类增加轻量报告夹具快照。
-- 扩展示例 gallery，覆盖透明度、忽略背景和感知聚类案例。
+- 改进 gallery 示例，使其覆盖透明度、被忽略背景和感知聚类示例。
 
 以后：
 - 评估用于发布自动化的可选机器可读 changelog 元数据。

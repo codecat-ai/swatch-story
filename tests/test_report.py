@@ -197,6 +197,19 @@ def test_write_json_report_creates_readable_json(tmp_path: Path) -> None:
     assert data["palette"][0]["hex"] == "#112233"
 
 
+def test_write_json_report_adds_stable_schema_version_without_mutating_input(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "story.json"
+    summary = sample_summary()
+
+    write_json_report(summary, output)
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["schema_version"] == 1
+    assert "schema_version" not in summary
+
+
 def test_write_json_report_applies_requested_precision(tmp_path: Path) -> None:
     output = tmp_path / "story.json"
 

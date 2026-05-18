@@ -12,7 +12,7 @@ Screenshots, covers, posters, and teaching images often contain useful color inf
 ## Features
 
 - Deterministic palette extraction from local image files with Pillow.
-- JSON output with source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, black and white text contrast ratios, readable text choice, and a stable token label.
+- JSON output with stable `schema_version: 1`, source filename, source path, image size, extraction settings, color rank, hex, RGB, count, percentage, relative luminance, black and white text contrast ratios, readable text choice, and a stable token label.
 - Design-token JSON output for the main image command, with Design Tokens Community Group schema metadata, stable color token keys, `$type: color`, `$value`, human-readable contrast guidance, and `extensions.swatchStory` metrics for token pipelines.
 - UTF-8 CSV output with stable columns for spreadsheet sorting, filtering, and lightweight data workflows.
 - CSS custom property output with hex, RGB triplets, black/white contrast ratios, and readable text-color variables.
@@ -454,9 +454,9 @@ With `--names`, palette entries include an extra approximate common-name hint:
 - `--title TEXT`: title for design-token JSON, HTML, Markdown, WCAG audit, text, SVG, GIMP palette, and ASE output. Default: `Swatch Story`.
 - `--names`: include deterministic, offline, approximate common color-name hints. The names come from a small built-in RGB reference set and are intended as human-friendly family hints, not exact color names.
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, and `--names`; the same matte is applied to both images. It also accepts `--min-delta-percent N`, where `N` is a float percentage of `0` or greater. For compare mode, `--json PATH` writes the deterministic comparison JSON report with root `schema_version: 1` instead of the single-image report, `--csv PATH` writes a deterministic UTF-8 comparison CSV with metadata plus filtered changed-color rows and unfiltered added/removed color rows, `--html PATH` writes a standalone HTML comparison report, `--markdown PATH` writes a portable Markdown comparison report, and `--text PATH` writes a UTF-8 plain-text drift report. These outputs can be requested together.
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. `--html PATH` writes a standalone ranked dashboard with escaped metadata and visual swatches for shared, added, removed, and changed color lists. These outputs can be requested together.
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, `--names`, `--precision`, `--title`, and `--min-delta-percent`. It requires at least one candidate image and at least one output path. `--json PATH` writes a deterministic baseline drift JSON report with root `schema_version: 1`, schema marker, version, baseline metadata, input-order candidates, ranks, drift scores, shared/added/removed colors, and changed-color details. `--markdown PATH` writes a ranked review with a summary table and candidate sections. `--text PATH` writes compact ranked log lines. `--html PATH` writes a standalone ranked dashboard with escaped metadata plus shared, added, removed, and changed color columns for browser review.
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` reuses `--colors`, `--sample-step`, `--sample-limit`, `--ignore-color`, `--matte`, `--cluster-distance`, `--cluster-space`, `--sort`, `--names`, `--precision`, and `--title` across every image. It requires at least two image paths and at least one output path. `--markdown PATH` writes a deterministic UTF-8 team-review Markdown report, and `--html PATH` writes a standalone HTML team-review report; both can be requested together. Batch mode does not use `--label-prefix`, `--tokens`, `--json`, `--csv`, `--css`, `--wcag-audit`, `--text`, `--svg`, `--gpl`, `--ase`, or `--html-thumbnail`.
 
@@ -490,10 +490,9 @@ swatch-story is alpha-stage but usable for local, deterministic palette extracti
 
 Now:
 - Harden clustering documentation and examples with real fixture scenarios.
-- Add schema-version notes for JSON-like outputs before downstream users depend on more fields.
+- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
 
 Next:
-- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
 - Improve gallery samples so they cover transparency, ignored backgrounds, and perceptual clustering examples.
 
 Later:

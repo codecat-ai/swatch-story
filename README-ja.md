@@ -12,7 +12,7 @@
 ## 機能
 
 - Pillow を使い、ローカル画像ファイルから決定的にパレットを抽出します。
-- JSON 出力には、元ファイル名、元ファイルパス、画像サイズ、抽出設定、色の順位、HEX、RGB、カウント、割合、相対輝度、黒/白文字のコントラスト比、読みやすい文字色、安定したトークンラベルが含まれます。
+- JSON 出力には、安定した `schema_version: 1`、ソースファイル名、ソースパス、画像サイズ、抽出設定、色の順位、HEX、RGB、カウント、割合、相対輝度、黒/白テキストとのコントラスト比、読みやすいテキスト色、安定したトークンラベルが含まれます。
 - メイン画像コマンドでは、Design Tokens Community Group schema メタデータ、安定した色トークンキー、`$type: color`、`$value`、読みやすいコントラスト指針、トークンパイプライン向けの `extensions.swatchStory` 指標を含むデザイントークン JSON を書き出せます。
 - UTF-8 CSV 出力には、表計算ソフトでの並べ替え、絞り込み、軽量なデータ処理に使いやすい安定した列が含まれます。
 - CSS カスタムプロパティ出力には、HEX、RGB の組、黒/白のコントラスト比、読みやすい文字色の変数が含まれます。
@@ -455,9 +455,9 @@ Drift score: 66.67%
 - `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、ルートの `schema_version: 1` を含む決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。`--html PATH` は、エスケープ済みメタデータと共有/追加/削除/変化色リストの視覚的なスウォッチを含む単体の順位付きダッシュボードを書き出します。これらの出力は同時に指定できます。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、ルートの `schema_version: 1`、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。`--html PATH` は、エスケープ済みメタデータと共有/追加/削除/変化色の列を含む、ブラウザー確認用の独立した順位付きダッシュボードを書き出します。
 
 `swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
 
@@ -491,11 +491,10 @@ swatch-story は alpha 段階ですが、ローカルで決定的なパレット
 
 Now:
 - 実際のフィクスチャシナリオでクラスタリングのドキュメントと例を強化します。
-- 下流利用者が追加フィールドに依存する前に、JSON 系出力の schema version 注記を追加します。
+- compare、baseline、batch の各フローで Lab クラスタリング用の軽量なレポートフィクスチャスナップショットを追加します。
 
 Next:
-- compare、baseline、batch フローの Lab クラスタリングに軽量なレポートフィクスチャスナップショットを追加します。
-- gallery サンプルを拡張し、透明度、無視背景、知覚クラスタリングの例を含めます。
+- 透明度、無視する背景、知覚的クラスタリングの例を含むようにギャラリーサンプルを改善します。
 
 Later:
 - リリース自動化向けの任意の機械可読 changelog メタデータを検討します。
