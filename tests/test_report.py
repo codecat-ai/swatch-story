@@ -42,6 +42,7 @@ def sample_summary() -> dict:
             "colors": 2,
             "sample_step": 1,
             "cluster_distance": 0,
+            "cluster_space": "rgb",
             "color_names": False,
         },
         "palette": [
@@ -327,7 +328,8 @@ def test_svg_report_renders_standalone_swatch_sheet_with_metadata() -> None:
     assert "Image: 2 x 1 px" in svg
     assert (
         "Settings: colors 2; sample step 1; sample limit unknown; "
-        "cluster distance 0; sort frequency; ignored color none; names included"
+        "cluster distance 0; cluster space rgb; sort frequency; "
+        "ignored color none; names included"
     ) in svg
     assert 'fill="#112233"' in svg
     assert 'fill="#eeeeee"' in svg
@@ -608,7 +610,8 @@ def test_markdown_report_renders_portable_palette_table() -> None:
         "Source: `sample.png`  \n"
         "Size: 2 x 1 px  \n"
         "Colors: 2  \n"
-        "Cluster distance: 0\n"
+        "Cluster distance: 0  \n"
+        "Cluster space: rgb\n"
         "\n"
         "| Rank | Color | RGB | Percent | Luminance | Contrast | Text | Label |\n"
         "| ---: | --- | --- | ---: | ---: | --- | --- | --- |\n"
@@ -670,7 +673,8 @@ def test_batch_markdown_report_combines_images_with_escaped_metadata() -> None:
     assert "Images: 2" in markdown
     assert (
         "Settings: colors 2; sample step 1; sample limit unknown; "
-        "cluster distance 0; sort frequency; ignored color none; names not included"
+        "cluster distance 0; cluster space rgb; sort frequency; "
+        "ignored color none; names not included"
     ) in markdown
     assert "## sample &lt;one&gt;.png" in markdown
     assert "Source path: `fixtures/sample &lt;one&gt;.png`" in markdown
@@ -708,7 +712,8 @@ def test_text_report_renders_paste_friendly_palette_sheet() -> None:
         "Source: sample.png\n"
         "Image size: 2 x 1 px\n"
         "Settings: colors 2; sample step 1; sample limit unknown; "
-        "cluster distance 0; sort frequency; ignored color #ffffff; names included\n"
+        "cluster distance 0; cluster space rgb; sort frequency; "
+        "ignored color #ffffff; names included\n"
         "\n"
         "Swatches:\n"
         "1. #112233 | rgb(17, 34, 51) | 50.0% | color-1 | "
@@ -765,7 +770,8 @@ def test_wcag_audit_report_renders_thresholds_and_recommendations() -> None:
         "Source path: `fixtures/sample.png`  \n"
         "Image size: 2 x 1 px  \n"
         "Settings: colors 2; sample step 1; sample limit unknown; "
-        "cluster distance 0; sort frequency; ignored color none; names not included\n"
+        "cluster distance 0; cluster space rgb; sort frequency; "
+        "ignored color none; names not included\n"
         "\n"
         "Thresholds: normal AA >= 4.5, large AA >= 3.0, "
         "normal AAA >= 7.0, large AAA >= 4.5.\n"

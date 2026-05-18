@@ -28,7 +28,7 @@
 - `--sample-limit` で自動サンプリングの目標を設定でき、再現性のある確認向けには決定的な `--sample-step` の上書きも使えます。
 - `--ignore-color HEX` により、フラットなスクリーンショット背景など、完全一致する RGB 色をパレット順位付けの前に除外し、残ったサンプリング済みピクセルから割合を再計算できます。
 - `--matte HEX` により、透明または半透明ピクセルを指定した背景色に合成してから抽出でき、暗い面、明るい面、ブランド背景上での見え方に合わせてアイコンやロゴをサンプリングできます。
-- `--cluster-distance N` により、順位付けの前に視覚的に近いサンプリング済み RGB 色を任意でグループ化できます。小さな決定的なローカル距離計算を使い、加重平均色を代表色にします。
+- `--cluster-distance N` により、順位付けの前に近いサンプリング色を任意でグループ化できます。`--cluster-space {rgb,lab}` は既存の決定的な RGB-ish 既定値を保つか、ローカルの sRGB から CIELAB への変換と Lab ユークリッド距離による知覚的なグループ化を使います。
 - `--sort {frequency,luminance,hue}` により、既定の頻度順を保つか、抽出後の選択済みスウォッチを暗い順または色相角順に並べ替えてデザイン確認できます。
 - `--precision N` により、JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約のレポート用割合、相対輝度、コントラスト比を 0 から 6 桁の小数で整形できます。省略時は既存の既定出力を保ちます。
 - `--label-prefix PREFIX` により、メイン画像コマンドの既定ラベル `color-1`、`color-2` を、`brand-1`、`brand-2` のようなデザイントークンラベルに置き換えられ、`--tokens` のキーにも反映されます。
@@ -158,6 +158,12 @@ swatch-story icon.png --colors 4 --matte "#003366" --json icon-brand-colors.json
 swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
 ```
 
+RGB チャンネル差と見た目の近さが一致しにくい場合は、知覚的な Lab 空間クラスタリングを使います。
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 5 --cluster-space lab --json photo-lab-colors.json
+```
+
 抽出後の選択済みスウォッチを暗い順に並べ替えます。
 
 ```bash
@@ -232,9 +238,9 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 `batch` コマンドには少なくとも 2 つの画像パスと、`--markdown PATH` または `--html PATH` の少なくとも一方が必要です。両方の出力を同時に指定できます。すべての画像に同じ決定的なパレット抽出設定を適用し、各ソース画像についてソース名/パス、画像サイズ、主要色、パレット行/カード、黒/白文字のコントラスト指針を含む Markdown セクションまたは HTML カードを書き出します。ユーザー由来のタイトル、ファイル名、パス、ラベル、名前はエスケープされ、ファイルは決定的な UTF-8 として書き込まれます。
 
-プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` と `baseline` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。`swatch-story presets PATH [PATH ...]` を使うと、画像ファイルを読まずに 1 つ以上のローカルプリセットを検証できます。このコマンドは各入力パス、`valid` ステータス、ソート済みの対応キーを表示し、空のプリセットでは `keys: none` と表示します。`--json PATH` を追加すると、すべてのプリセットが検証に成功した後で決定的なレポートを書き出します。
+プリセットファイルは、コマンド間で決定的な抽出既定値を共有するためのローカル JSON オブジェクトです。使用できるキーは `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`cluster_space`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` です。メイン画像コマンドは抽出設定に加えて `names`、`precision`、`label_prefix`、`title` を使い、`compare` と `baseline` は共通抽出設定に加えて `names`、`precision`、`title`、`min_delta_percent` を使い、`batch` は共通抽出設定に加えて `names`、`precision`、`title` を使います。コマンドラインで入力したフラグは常にプリセット値を上書きします。プリセットはローカルファイルである必要があり、URL、存在しないファイル、不正な JSON、オブジェクト以外の JSON、不明なキー、不正な値はレポートを書き出す前に失敗します。`swatch-story presets PATH [PATH ...]` を使うと、画像ファイルを読まずに 1 つ以上のローカルプリセットを検証できます。このコマンドは各入力パス、`valid` ステータス、ソート済みの対応キーを表示し、空のプリセットでは `keys: none` と表示します。`--json PATH` を追加すると、すべてのプリセットが検証に成功した後で決定的なレポートを書き出します。
 
-HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
+HTML レポートはブラウザーで確認しやすいコンタクトシートです。画像名とパス、サイズ、指定した色数、実際のサンプリング間隔、クラスタ距離と空間、並べ替えモード、近似名の有無、短い要約を表示し、各スウォッチカードには HEX、RGB、相対輝度、黒/白のコントラスト比、読みやすい文字色、コントラスト指針が含まれます。`--html PATH` と一緒に `--html-thumbnail PATH` を指定すると、元画像から上限付きのローカルサムネイルを生成し、可能な場合は相対パスでリンクします。元画像は base64 として埋め込まれません。
 
 SVG レポートは、ドキュメントやスライド向けの単体ローカルスウォッチシートです。タイトル、元ファイル名、画像サイズ、抽出設定を表示し、各スウォッチ行には色の矩形、HEX、任意の近似名、割合、輝度、黒/白のコントラスト比、ラベル、読みやすい文字色が含まれます。ユーザー由来のタイトル、元ファイル名、ラベル、名前は XML エスケープされ、元画像自体は埋め込まれません。
 
@@ -334,7 +340,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; cluster space rgb; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | color-1 | contrast black 1.3:1 white 16.15:1 | text white
@@ -370,7 +376,7 @@ Columns: 2
 }
 ```
 
-JSON 設定には `cluster_distance` と選択した並べ替えモード、例えば `"cluster_distance": 0` と `"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは任意のクラスタリングと順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。`--matte` を使うと、JSON 設定には正規化された小文字の値、例えば `"matte": "#111827"` が含まれます。既定の白いマットを使う場合、このフィールドは省略されます。
+JSON 設定には `cluster_distance`、`cluster_space`、選択した並べ替えモード、例えば `"cluster_distance": 0`、`"cluster_space": "rgb"`、`"sort": "frequency"` が含まれます。`--ignore-color` を使うと、JSON 設定には正規化された小文字の値、例えば `"ignore_color": "#ffffff"` が含まれます。無視されたピクセルは任意のクラスタリングと順位付けの前に除外されるため、スウォッチの割合は残ったサンプリング済みピクセルだけを基準に計算されます。`--matte` を使うと、JSON 設定には正規化された小文字の値、例えば `"matte": "#111827"` が含まれます。既定の白いマットを使う場合、このフィールドは省略されます。
 
 比較 JSON 出力例：
 
@@ -440,19 +446,20 @@ Drift score: 66.67%
 - `--sample-limit N`: `--sample-step` が省略された場合に、自動ステップが目標とするサンプリング済みピクセル数を指定します。既定値は 10000 です。1 以上である必要があります。`--sample-step` が指定された場合、固定ステップがピクセル走査を制御しますが、JSON 設定には選択された `sample_limit` と実際の `sample_step` が含まれます。
 - `--ignore-color HEX`: パレット順位付けの前に、十六進 RGB 色と完全一致するサンプリング済みピクセルを除外します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。JSON/レポート設定には正規化された小文字の `#rrggbb` 値が保存されます。すべてのサンプリング済みピクセルが無視された場合、または値が有効な十六進 RGB でない場合、コマンドは明確なエラーで終了します。
 - `--matte HEX`: パレット抽出の前に、透明または半透明ピクセルを十六進 RGB 背景色に合成します。`#rrggbb` または `rrggbb` を受け付け、大文字小文字は区別しません。既定の挙動は白いマットのままで、このオプションを明示した場合だけ JSON 設定に正規化された `matte` が含まれます。
-- `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング済み RGB 色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
+- `--cluster-distance N`: 0 より大きい場合、パレット順位付けの前に似ているサンプリング色をグループ化します。値は 0 から 255 の範囲で指定します。既定値は 0 で、完全一致 RGB バケットの挙動を保ちます。クラスタの代表色は、サンプリング済みピクセル数で重み付けした RGB の丸め平均です。
+- `--cluster-space {rgb,lab}`: `--cluster-distance` が使う距離空間を選びます。`rgb` は既定値で、既存の決定的な RGB-ish クラスタリングを保ちます。`lab` は D65 白色点で sRGB を XYZ と CIELAB に変換し、Lab ユークリッド距離で色を比較します。`--cluster-distance` が 0 の場合でも、JSON とレポート設定には選択値が常に含まれます。
 - `--sort {frequency,luminance,hue}`: 選択済みパレット項目の順序を指定します。`frequency` はサンプリング済みピクセル数による既定の順位を保ち、`luminance` はスウォッチを暗い順から明るい順に並べ替え、`hue` は HSV 色相角順の有彩色スウォッチの後にグレースケールまたはほぼグレースケールのスウォッチを置きます。並べ替え後のパレットは 1 から順位を振り直します。既定値は `frequency` です。
 - `--precision N`: ユーザー向けレポートの割合、相対輝度、コントラスト比を `N` 桁の小数で整形します。範囲は 0 から 6 です。省略時は既存の JSON 数値とレポート文字列を保ちます。このオプションは通常のパレット抽出の JSON、デザイントークン JSON、CSV、Markdown、WCAG 監査、プレーンテキスト、SVG、HTML、ターミナル要約に適用されます。CSS、GIMP `.gpl`、Adobe `.ase` などのデザインツール向けパレット形式は、それぞれの形式固有の出力を保ちます。
 - `--label-prefix PREFIX`: メイン画像コマンドで既定のパレットラベルを `PREFIX-1`、`PREFIX-2` のように置き換えます。`PREFIX` は小文字で始まり、小文字、数字、ハイフンだけを含められます。例えば `--label-prefix brand` は、JSON、デザイントークン JSON キー、CSV、CSS カスタムプロパティ名、Markdown、WCAG 監査、プレーンテキスト、HTML、SVG、GIMP `.gpl`、Adobe `.ase`、ターミナル出力に `brand-1` のようなラベルを書き出します。compare と gallery コマンドではこのオプションは使いません。
-- `--preset PATH`: メイン画像、`compare`、`baseline`、`batch` コマンドの実行前に、再利用できる既定値をローカル JSON プリセットから読み込みます。明示した CLI フラグはプリセット値を上書きします。プリセットには `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` を含められます。モードで使わないキーは適用されません。
+- `--preset PATH`: メイン画像、`compare`、`baseline`、`batch` コマンドの実行前に、再利用できる既定値をローカル JSON プリセットから読み込みます。明示した CLI フラグはプリセット値を上書きします。プリセットには `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`cluster_space`、`sort`、`names`、`precision`、`label_prefix`、`title`、`min_delta_percent` を含められます。モードで使わないキーは適用されません。
 - `--title TEXT`: デザイントークン JSON、HTML、Markdown、WCAG 監査、プレーンテキスト、SVG、GIMP パレット、ASE 出力のタイトルです。既定値は `Swatch Story` です。
 - `--names`: 決定的でオフラインの近似的な一般色名ヒントを含めます。名前は小さな組み込み RGB 参照セットから選ばれ、人が読みやすい色系統のヒントを目的としており、厳密な色名ではありません。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names` を再利用します。同じ matte が両方の画像に適用されます。さらに `--min-delta-percent N` を指定できます。`N` は `0` 以上の浮動小数点パーセントです。比較モードでは、`--json PATH` は単一画像レポートではなく、決定的な比較 JSON レポートを書き出し、`--csv PATH` はメタデータ、フィルター済みの色変化行、フィルターされない追加/削除色行を含む決定的な UTF-8 比較 CSV を書き出し、`--html PATH` は単体 HTML 比較レポートを書き出し、`--markdown PATH` はポータブルな Markdown 比較レポートを書き出し、`--text PATH` は UTF-8 プレーンテキストのドリフトレポートを書き出します。これらの出力は同時に指定できます。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。`--html PATH` は、エスケープ済みメタデータと共有/追加/削除/変化色リストの視覚的なスウォッチを含む単体の順位付きダッシュボードを書き出します。これらの出力は同時に指定できます。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` は、`--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title`、`--min-delta-percent` を再利用します。少なくとも 1 枚の候補画像と少なくとも 1 つの出力パスが必要です。`--json PATH` は、schema マーカー、version、ベースラインメタデータ、入力順の候補、順位、ドリフトスコア、共有/追加/削除色、色変化詳細を含む決定的なベースラインドリフト JSON レポートを書き出します。`--markdown PATH` は、要約表と候補ごとのセクションを含む順位付きレビューを書き出します。`--text PATH` は、コンパクトな順位付きログ行を書き出します。`--html PATH` は、エスケープ済みメタデータと共有/追加/削除/変化色リストの視覚的なスウォッチを含む単体の順位付きダッシュボードを書き出します。これらの出力は同時に指定できます。
 
-`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` は、すべての画像で `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title` を再利用します。少なくとも 2 つの画像パスと少なくとも 1 つの出力パスが必要です。`--markdown PATH` は決定的な UTF-8 のチームレビュー Markdown レポートを書き出し、`--html PATH` は単体 HTML チームレビューレポートを書き出します。両方を同時に指定できます。batch モードでは `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase`、`--html-thumbnail` は使いません。
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` は、組み込みサンプル PNG 素材を書き出し、既定ではソースチェックアウト用コマンドと読みやすいサンプルタグを含む Markdown `README.md` gallery も生成します。`--manifest` は、schema version `1`、generator 名、サンプルファイル名、寸法、ストーリー、タグ、期待される主要色、期待されるパレット HEX 値を含む決定的な UTF-8 `manifest.json` も書き出します。`--tag` は繰り返し指定でき、要求したタグをすべて含むサンプルだけを生成します。照合は大文字小文字を区別せず、不明なタグや一致しないフィルターはファイルを書き出す前に失敗します。`--no-index` は `README.md` だけを省略するため、`--manifest` と組み合わせられます。`--force` がない限り、`manifest.json` を含む既存の gallery ファイルは上書きしません。
 
@@ -479,7 +486,24 @@ pytest -q
 ```
 
 ## ロードマップ
-- CIELAB など、より正式な色モデルに基づく任意の知覚色空間クラスタリングで、視覚的なまとまりをさらに近づける。
+
+swatch-story は alpha 段階ですが、ローカルで決定的なパレット抽出とレビューレポートには利用できます。小さな保守サイクルで進め、振る舞いの変更にはテストを付け、README 翻訳の意味を同期し、機能単位の完了後またはリリースタグ前にロードマップを見直します。
+
+Now:
+- 実際のフィクスチャシナリオでクラスタリングのドキュメントと例を強化します。
+- 下流利用者が追加フィールドに依存する前に、JSON 系出力の schema version 注記を追加します。
+
+Next:
+- compare、baseline、batch フローの Lab クラスタリングに軽量なレポートフィクスチャスナップショットを追加します。
+- gallery サンプルを拡張し、透明度、無視背景、知覚クラスタリングの例を含めます。
+
+Later:
+- リリース自動化向けの任意の機械可読 changelog メタデータを検討します。
+- 繰り返し使う CLI プリセットで一般的なワークフローを十分に覆えなくなった場合にのみ、設定ファイル対応を検討します。
+
+完了レビュー:
+- ロードマップ項目は、テスト、ドキュメント、翻訳 README の意味、リリースノートまたは changelog への影響を確認してから完了とします。
+- 完了した項目は README のロードマップから削除し、内容が大きい場合は [ROADMAP.md](ROADMAP.md) または changelog に記録します。
 
 ## コントリビュート
 

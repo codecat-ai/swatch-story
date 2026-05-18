@@ -28,7 +28,7 @@
 - 通过 `--sample-limit` 配置自动采样目标，同时保留确定性的 `--sample-step` 覆盖，方便可重复审阅。
 - `--ignore-color HEX` 会在调色板排名前排除精确匹配的 RGB 颜色，例如平面截图背景，并基于剩余采样像素重新计算占比。
 - `--matte HEX` 会在提取前把透明和半透明像素合成到指定背景色上，方便按深色、浅色或品牌底色上的实际外观采样图标和 logo。
-- `--cluster-distance N` 可在排名前选择性地把视觉上接近的采样 RGB 颜色分组，使用小型、确定性的本地距离计算，并用加权平均颜色作为代表色。
+- `--cluster-distance N` 可在排名前选择性地把接近的采样颜色分组；`--cluster-space {rgb,lab}` 会保留现有确定性 RGB-ish 默认值，或使用本地 sRGB 到 CIELAB 转换和 Lab 欧氏距离进行感知分组。
 - `--sort {frequency,luminance,hue}` 保留默认的频率排名，或在提取后把已选色块按从暗到亮、或按色相角度重新排序，方便设计师审阅。
 - `--precision N` 可把 JSON、设计令牌 JSON、CSV、Markdown、WCAG 审计、纯文本、SVG、HTML 和终端摘要中的报告占比、相对亮度和对比度格式化为 0 到 6 位小数；省略时保持现有默认输出。
 - `--label-prefix PREFIX` 会在主图像命令中把默认的 `color-1`、`color-2` 标签替换为 `brand-1`、`brand-2` 这样的设计令牌标签，也会影响 `--tokens` 的键名。
@@ -158,6 +158,12 @@ swatch-story icon.png --colors 4 --matte "#003366" --json icon-brand-colors.json
 swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
 ```
 
+当 RGB 通道变化和视觉相似度不一致时，使用感知 Lab 空间聚类：
+
+```bash
+swatch-story photo.png --colors 6 --cluster-distance 5 --cluster-space lab --json photo-lab-colors.json
+```
+
 在提取后把已选色块按从暗到亮排序：
 
 ```bash
@@ -238,9 +244,9 @@ swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --nam
 
 `batch` 命令要求至少两个图像路径，并且至少提供 `--markdown PATH` 或 `--html PATH` 之一；两个输出可以同时请求。它会对每张图片复用相同的确定性调色板提取设置，并为每个来源图像写入一个 Markdown 章节或 HTML 卡片，包含来源名称/路径、图像尺寸、主色、调色板行/卡片，以及黑/白文字对比度建议。用户来源的标题、文件名、路径、标签和名称都会被转义，文件以确定性 UTF-8 写入。
 
-预设文件是本地 JSON 对象，用于在命令之间共享确定性的抽取默认值。可接受的键包括 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`。主图像命令使用抽取设置以及 `names`、`precision`、`label_prefix`、`title`；`compare` 和 `baseline` 使用共享抽取设置以及 `names`、`precision`、`title`、`min_delta_percent`；`batch` 使用共享抽取设置以及 `names`、`precision`、`title`。命令行上输入的标志始终覆盖预设值。预设必须是本地文件；URL、缺失文件、无效 JSON、非对象 JSON、未知键和无效值都会在写入报告前失败。使用 `swatch-story presets PATH [PATH ...]` 可以在不读取图像文件的情况下验证一个或多个本地预设。该命令会打印每个输入路径、`valid` 状态和按顺序排序的受支持键；空预设会显示 `keys: none`。添加 `--json PATH` 可在所有预设验证成功后写入确定性报告。
+预设文件是本地 JSON 对象，用于在命令之间共享确定性的抽取默认值。可接受的键包括 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`cluster_space`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`。主图像命令使用抽取设置以及 `names`、`precision`、`label_prefix`、`title`；`compare` 和 `baseline` 使用共享抽取设置以及 `names`、`precision`、`title`、`min_delta_percent`；`batch` 使用共享抽取设置以及 `names`、`precision`、`title`。命令行上输入的标志始终覆盖预设值。预设必须是本地文件；URL、缺失文件、无效 JSON、非对象 JSON、未知键和无效值都会在写入报告前失败。使用 `swatch-story presets PATH [PATH ...]` 可以在不读取图像文件的情况下验证一个或多个本地预设。该命令会打印每个输入路径、`valid` 状态和按顺序排序的受支持键；空预设会显示 `keys: none`。添加 `--json PATH` 可在所有预设验证成功后写入确定性报告。
 
-HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。把 `--html-thumbnail PATH` 与 `--html PATH` 一起使用时，会从源图片生成一个有尺寸上限的本地缩略图，并尽量用相对路径链接；源图片不会以 base64 嵌入。
+HTML 报告是适合浏览器查看的联系表。它会显示图像名称和路径、尺寸、请求的颜色数量、实际采样步长、聚类距离和空间、排序模式、是否包含近似名称、简短摘要，以及每个色块的卡片；卡片包含 HEX、RGB、相对亮度、黑/白对比度、可读文字颜色和对比度建议。把 `--html-thumbnail PATH` 与 `--html PATH` 一起使用时，会从源图片生成一个有尺寸上限的本地缩略图，并尽量用相对路径链接；源图片不会以 base64 嵌入。
 
 SVG 报告是适合文档和幻灯片的独立本地色块单页。它会显示标题、源文件名、图像尺寸、提取设置，以及每个色块一行的颜色矩形、HEX、可选近似名称、占比、亮度、黑/白对比度、标签和可读文字颜色。用户来源的标题、源文件名、标签和名称都会进行 XML 转义，并且不会嵌入源图片本身。
 
@@ -336,7 +342,7 @@ Poster Palette
 
 Source: poster.png
 Image size: 1200 x 800 px
-Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; sort frequency; ignored color none; names not included
+Settings: colors 2; sample step 1; sample limit 10000; cluster distance 0; cluster space rgb; sort frequency; ignored color none; names not included
 
 Swatches:
 1. #112233 | rgb(17, 34, 51) | 32.43% | color-1 | contrast black 1.3:1 white 16.15:1 | text white
@@ -372,7 +378,7 @@ Columns: 2
 }
 ```
 
-JSON 设置会包含 `cluster_distance` 和所选排序模式，例如 `"cluster_distance": 0` 和 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在可选聚类和排名前移除，因此色块占比只基于剩余采样像素计算。使用 `--matte` 时，JSON 设置会包含规范化的小写值，例如 `"matte": "#111827"`；使用默认白色底色时不会写入该字段。
+JSON 设置会包含 `cluster_distance`、`cluster_space` 和所选排序模式，例如 `"cluster_distance": 0`、`"cluster_space": "rgb"` 和 `"sort": "frequency"`。使用 `--ignore-color` 时，JSON 设置会包含规范化的小写值，例如 `"ignore_color": "#ffffff"`。被忽略的像素会在可选聚类和排名前移除，因此色块占比只基于剩余采样像素计算。使用 `--matte` 时，JSON 设置会包含规范化的小写值，例如 `"matte": "#111827"`；使用默认白色底色时不会写入该字段。
 
 对比 JSON 输出示例：
 
@@ -442,19 +448,20 @@ Drift score: 66.67%
 - `--sample-limit N`：在未提供 `--sample-step` 时，设置自动步长的目标采样像素数。默认值：10000。必须大于等于 1。如果提供了 `--sample-step`，固定步长会控制像素迭代；JSON 设置仍会包含所选的 `sample_limit` 和实际的 `sample_step`。
 - `--ignore-color HEX`：在调色板排名前排除与某个十六进制 RGB 颜色完全匹配的采样像素。接受 `#rrggbb` 或 `rrggbb`，不区分大小写，并在 JSON/报告设置中存储规范化的小写 `#rrggbb` 值。如果所有采样像素都被忽略，或该值不是有效的十六进制 RGB，命令会以清晰错误退出。
 - `--matte HEX`：在提取调色板前，把透明或半透明像素合成到十六进制 RGB 背景色上。接受 `#rrggbb` 或 `rrggbb`，不区分大小写。默认行为仍是白色底色，只有显式提供该选项时，JSON 设置才会包含规范化的 `matte`。
-- `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样 RGB 颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
+- `--cluster-distance N`：当值大于 0 时，在调色板排名前把相似的采样颜色分组。取值必须在 0 到 255 之间。默认值为 0，保留精确 RGB 分桶行为。聚类代表色是按采样像素数量加权后的 RGB 四舍五入平均值。
+- `--cluster-space {rgb,lab}`：选择 `--cluster-distance` 使用的距离空间。`rgb` 是默认值，并保留现有确定性的 RGB-ish 聚类。`lab` 会使用 D65 白点把 sRGB 转换到 XYZ 和 CIELAB，然后用 Lab 欧氏距离比较颜色。即使 `--cluster-distance` 为 0，JSON 和报告设置也始终包含所选值。
 - `--sort {frequency,luminance,hue}`：设置已选调色板条目的顺序。`frequency` 保留按采样像素数量排名的默认顺序，`luminance` 将色块从暗到亮重新排序，`hue` 先按 HSV 色相角度排列彩色色块，再放置灰阶或近灰阶色块。重新排序后的调色板会从 1 重新编号。默认值：`frequency`。
 - `--precision N`：把面向用户的报告占比、相对亮度和对比度格式化为 `N` 位小数，范围为 0 到 6。省略时会保留现有 JSON 数字和报告字符串。该选项适用于普通调色板提取的 JSON、设计令牌 JSON、CSV、Markdown、WCAG 审计、纯文本、SVG、HTML 和终端摘要；CSS、GIMP `.gpl`、Adobe `.ase` 等设计工具调色板格式会保留各自的格式化输出。
 - `--label-prefix PREFIX`：在主图像命令中把默认调色板标签替换为 `PREFIX-1`、`PREFIX-2` 等形式。`PREFIX` 必须以小写字母开头，并且只能包含小写字母、数字和连字符。例如，`--label-prefix brand` 会把 `brand-1` 写入 JSON、设计令牌 JSON 键、CSV、CSS 自定义属性名、Markdown、WCAG 审计、纯文本、HTML、SVG、GIMP `.gpl`、Adobe `.ase` 和终端输出。compare 和 gallery 命令不使用此选项。
-- `--preset PATH`：在运行主图像、`compare`、`baseline` 或 `batch` 命令前，从本地 JSON 预设读取可复用默认值。显式 CLI 标志会覆盖预设值。预设可包含 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`；当前模式不支持的键不会被应用。
+- `--preset PATH`：在运行主图像、`compare`、`baseline` 或 `batch` 命令前，从本地 JSON 预设读取可复用默认值。显式 CLI 标志会覆盖预设值。预设可包含 `colors`、`sample_step`、`sample_limit`、`ignore_color`、`matte`、`cluster_distance`、`cluster_space`、`sort`、`names`、`precision`、`label_prefix`、`title` 和 `min_delta_percent`；当前模式不支持的键不会被应用。
 - `--title TEXT`：设计令牌 JSON、HTML、Markdown、WCAG 审计、纯文本、SVG、GIMP 调色板和 ASE 输出标题。默认值：`Swatch Story`。
 - `--names`：包含确定性、离线、近似的常见颜色名称提示。这些名称来自一小组内置 RGB 参考值，适合作为方便阅读的颜色家族提示，而不是精确颜色命名。
 
-`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
+`swatch-story compare BEFORE_IMAGE AFTER_IMAGE [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort` 和 `--names`；同一个 matte 会应用到两张图片。它也接受 `--min-delta-percent N`，其中 `N` 是 `0` 或更大的浮点百分比。在对比模式下，`--json PATH` 会写入确定性的对比 JSON 报告，而不是单图报告；`--csv PATH` 会写入确定性的 UTF-8 对比 CSV，包含元数据、过滤后的颜色变化行以及不过滤的新增/移除颜色行；`--html PATH` 会写入独立 HTML 对比报告；`--markdown PATH` 会写入便携 Markdown 对比报告；`--text PATH` 会写入 UTF-8 纯文本漂移报告。这些输出可以同时请求。
 
-`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含 schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。`--html PATH` 会写入独立排名仪表盘，其中包含已转义的元数据，以及共有、新增、移除和变化颜色列表的可视色块。这些输出可以同时请求。
+`swatch-story baseline BASELINE_IMAGE CANDIDATE_IMAGE [CANDIDATE_IMAGE ...] [options]` 会复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision`、`--title` 和 `--min-delta-percent`。它要求至少一张候选图像和至少一个输出路径。`--json PATH` 会写入确定性的基准漂移 JSON 报告，包含 schema 标记、版本、基准元数据、按输入顺序保存的候选项、排名、漂移分数、共有/新增/移除颜色和颜色变化明细。`--markdown PATH` 会写入带摘要表和候选章节的排序审阅报告。`--text PATH` 会写入紧凑的排序日志行。`--html PATH` 会写入独立排名仪表盘，其中包含已转义的元数据，以及共有、新增、移除和变化颜色列表的可视色块。这些输出可以同时请求。
 
-`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` 会在每张图片上复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--sort`、`--names`、`--precision` 和 `--title`。它要求至少两个图像路径和至少一个输出路径。`--markdown PATH` 会写入确定性的 UTF-8 团队审阅 Markdown 报告，`--html PATH` 会写入独立 HTML 团队审阅报告；两者可以同时请求。批量模式不使用 `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase` 或 `--html-thumbnail`。
+`swatch-story batch IMAGE IMAGE [IMAGE...] [options]` 会在每张图片上复用 `--colors`、`--sample-step`、`--sample-limit`、`--ignore-color`、`--matte`、`--cluster-distance`、`--cluster-space`、`--sort`、`--names`、`--precision` 和 `--title`。它要求至少两个图像路径和至少一个输出路径。`--markdown PATH` 会写入确定性的 UTF-8 团队审阅 Markdown 报告，`--html PATH` 会写入独立 HTML 团队审阅报告；两者可以同时请求。批量模式不使用 `--label-prefix`、`--tokens`、`--json`、`--csv`、`--css`、`--wcag-audit`、`--text`、`--svg`、`--gpl`、`--ase` 或 `--html-thumbnail`。
 
 `swatch-story gallery OUT_DIR [--manifest] [--no-index] [--force] [--tag TAG]...` 会写入内置示例 PNG 素材，并默认生成包含源码检出命令和可读示例标签的 Markdown `README.md` gallery。`--manifest` 还会写入确定性的 UTF-8 `manifest.json`，其中包含 schema 版本 `1`、生成器名称、示例文件名、尺寸、故事、标签、预期主色和预期调色板十六进制值。`--tag` 可以重复使用，只生成包含所有请求标签的示例；匹配不区分大小写，未知标签或无匹配结果会在写入文件前失败。`--no-index` 只跳过 `README.md`，因此可以与 `--manifest` 组合使用。除非提供 `--force`，否则该命令会拒绝覆盖已有 gallery 文件，包括 `manifest.json`。
 
@@ -481,7 +488,24 @@ pytest -q
 ```
 
 ## 路线图
-- 基于更正式色彩模型（如 CIELAB）的可选感知色彩空间聚类，让视觉分组更接近人眼感受。
+
+swatch-story 仍处于 alpha 阶段，但已经可用于本地、确定性的调色板提取和审阅报告。项目采用小步维护节奏：行为变更应配套测试，文档翻译应保持含义同步，并在每个功能切片后或发布标签前复查路线图。
+
+现在：
+- 用真实素材场景补强聚类文档和示例。
+- 在下游用户依赖更多字段前，为 JSON 类输出补充 schema 版本说明。
+
+下一步：
+- 为 compare、baseline 和 batch 流程中的 Lab 聚类增加轻量报告夹具快照。
+- 扩展示例 gallery，覆盖透明度、忽略背景和感知聚类案例。
+
+以后：
+- 评估用于发布自动化的可选机器可读 changelog 元数据。
+- 仅当重复 CLI 预设无法覆盖常见流程时，再考虑配置文件支持。
+
+完成复查：
+- 路线图条目只有在测试、文档、翻译 README 含义以及发布说明或 changelog 影响都检查后才算完成。
+- 已完成条目应从 README 路线图移除，并在内容较大时归档到 [ROADMAP.md](ROADMAP.md) 或 changelog。
 
 ## 贡献
 
