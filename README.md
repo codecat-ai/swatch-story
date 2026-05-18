@@ -163,6 +163,8 @@ Use perceptual Lab-space clustering when small RGB channel changes do not match 
 swatch-story photo.png --colors 6 --cluster-distance 5 --cluster-space lab --json photo-lab-colors.json
 ```
 
+Lab clustering is most useful for screenshots, exported art, and design review sets where compression, antialiasing, or gradients create many RGB-adjacent pixels that should be treated as the same visual color. The selected `cluster_space` and `cluster_distance` are recorded in JSON and rendered report settings so compare, baseline, and batch reports remain reviewable later.
+
 Sort selected swatches from dark to light after extraction:
 
 ```bash
@@ -223,6 +225,12 @@ Compare two local images and write JSON, CSV, HTML, Markdown, and plain-text dri
 swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111827 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
+For perceptual clustering in a drift snapshot, use Lab clustering with the same extraction settings on both sides:
+
+```bash
+swatch-story compare before.png after.png --colors 6 --cluster-distance 5 --cluster-space lab --json palette-drift.json
+```
+
 The compare command prints a concise terminal report with the before and after paths, dominant color for each image, shared colors, added colors, removed colors, changed shared-color percentages, and a drift score. The score is the percentage of selected palette HEX values that changed, calculated as `100 * (1 - shared / union)`, so `0%` means the selected palette HEX values are identical and `100%` means there is no overlap. Use `--min-delta-percent N` to hide shared-color delta detail rows whose absolute percentage change is less than `N`; added and removed colors are still reported.
 
 The compare CSV report is a deterministic UTF-8 table for spreadsheet palette drift review. The compare HTML report is a standalone local file for browser review with compact CSS-only side-by-side palette preview strips for each image. The compare Markdown report is a portable table for notes, issue comments, and design docs. The compare plain-text report is a deterministic UTF-8 drift sheet for emails, tickets, and review logs. These reports include safely represented before and after source names and paths, each side's dominant colors, shared colors, added colors, removed colors, filtered changed-color delta details, clear `None` states for empty change lists, and the drift score. You can request `--json`, `--csv`, `--html`, `--markdown`, and `--text` in the same compare command.
@@ -233,12 +241,24 @@ Compare one baseline image against several candidates and rank drift:
 swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt --html baseline-drift.html
 ```
 
+Use the same Lab clustering settings for the baseline and every candidate when tiny RGB differences should not become separate drift colors:
+
+```bash
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --cluster-distance 5 --cluster-space lab --json baseline-drift.json
+```
+
 The baseline command requires one baseline image, at least one candidate image, and at least one of `--json PATH`, `--markdown PATH`, `--text PATH`, or `--html PATH`; all four outputs may be requested together. It reuses the compare drift logic for every candidate, keeps JSON candidates in input order with a rank and drift score, and sorts Markdown/text/HTML summaries by drift score descending. Baseline reports include baseline source metadata, candidate source metadata, shared colors, added colors, removed colors, filtered changed-color details, and escaped user-derived titles, names, and paths. The baseline HTML report is a standalone dashboard with deterministic inline CSS, metadata panels, a sortable-looking ranked candidate table, and visual swatches for shared, added, removed, and changed color lists.
 
 Combine several local image audits into one team-review report:
 
 ```bash
 swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --names --title "Campaign Palette Review" --markdown campaign-review.md --html campaign-review.html
+```
+
+For a compact team snapshot that groups visually close sampled colors across all inputs, add Lab clustering to the batch extraction settings:
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --cluster-distance 5 --cluster-space lab --markdown campaign-review.md
 ```
 
 The batch command requires at least two image paths and at least one of `--markdown PATH` or `--html PATH`; both outputs may be requested together. It reuses the same deterministic palette extraction settings for every image and writes one Markdown section or HTML card per source image with the source name/path, image size, dominant colors, palette rows/cards, and black/white text contrast guidance. User-derived titles, filenames, paths, labels, and names are escaped, and files are written as deterministic UTF-8.
@@ -489,11 +509,12 @@ pytest -q
 swatch-story is alpha-stage but usable for local, deterministic palette extraction and review reports. The project follows a small-maintenance cadence: behavior changes should land with tests, documentation translations should stay synchronized in meaning, and the roadmap should be reviewed after each feature slice or before a release tag.
 
 Now:
-- Harden clustering documentation and examples with real fixture scenarios.
-- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
+- Complete one more release-readiness review after the Lab clustering fixture/docs slice, then decide whether swatch-story should stay in growth mode or move toward maintenance mode.
 
 Next:
 - Improve gallery samples so they cover transparency, ignored backgrounds, and perceptual clustering examples.
+- Add a short release checklist that ties verification commands, README translation sync, and changelog review to tag preparation.
+- If the completion review finds no user-facing gaps, shift the roadmap from feature growth toward maintenance: bug fixes, dependency hygiene, documentation accuracy, and report-schema stability.
 
 Later:
 - Consider optional machine-readable changelog metadata for release automation.

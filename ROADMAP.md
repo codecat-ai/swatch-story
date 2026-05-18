@@ -8,13 +8,13 @@ swatch-story is alpha-stage but usable for local, deterministic palette extracti
 
 ## Now
 
-- Harden clustering documentation and examples with real fixture scenarios.
-- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
+- Complete one more release-readiness review after the Lab clustering fixture/docs slice, then decide whether swatch-story should stay in growth mode or move toward maintenance mode.
 
 ## Next
 
-- Add lightweight report fixture snapshots for Lab clustering in compare, baseline, and batch flows.
 - Improve gallery samples so they cover transparency, ignored backgrounds, and perceptual clustering examples.
+- Add a short release checklist that ties verification commands, README translation sync, and changelog review to tag preparation.
+- If the completion review finds no user-facing gaps, shift the roadmap from feature growth toward maintenance: bug fixes, dependency hygiene, documentation accuracy, and report-schema stability.
 
 ## Later
 
@@ -30,6 +30,7 @@ swatch-story is alpha-stage but usable for local, deterministic palette extracti
 
 ## Completion Review
 
+- Completed: Lab clustering now has lightweight compare, baseline, and batch report fixture snapshots plus synchronized README examples.
 - A roadmap item is complete only after tests, docs, translated README meaning, and release notes or changelog impact have been checked.
 - Completed items should be removed from README roadmap summaries and either archived here with context or recorded in the changelog.
 - Items that stay open across multiple feature slices should be split into smaller verifiable tasks.

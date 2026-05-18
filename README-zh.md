@@ -164,6 +164,8 @@ swatch-story photo.png --colors 6 --cluster-distance 12 --json photo-colors.json
 swatch-story photo.png --colors 6 --cluster-distance 5 --cluster-space lab --json photo-lab-colors.json
 ```
 
+Lab 聚类适合截图、导出 artwork 和设计审阅集，因为压缩、抗锯齿或渐变可能产生许多 RGB 接近、但应该视为同一种视觉颜色的像素。JSON 和渲染报告设置会记录所选的 `cluster_space` 与 `cluster_distance`，方便之后审阅 compare、baseline 和 batch 报告。
+
 在提取后把已选色块按从暗到亮排序：
 
 ```bash
@@ -224,6 +226,12 @@ swatch-story presets presets/poster.json presets/baseline.json --json preset-val
 swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111827 --min-delta-percent 2 --json palette-drift.json --csv palette-drift.csv --html palette-drift.html --markdown palette-drift.md --text palette-drift.txt
 ```
 
+在漂移快照中使用感知聚类时，对两侧应用相同的 Lab 抽取设置：
+
+```bash
+swatch-story compare before.png after.png --colors 6 --cluster-distance 5 --cluster-space lab --json palette-drift.json
+```
+
 `compare` 命令会打印简洁的终端报告，包含前后图片路径、两张图各自的主色、共有颜色、新增颜色、移除颜色、共有颜色占比变化和漂移分数。分数表示已选调色板 HEX 值中发生变化的比例，计算方式为 `100 * (1 - shared / union)`；`0%` 表示已选调色板 HEX 值完全相同，`100%` 表示没有重叠。使用 `--min-delta-percent N` 可以隐藏绝对占比变化小于 `N` 的共有颜色明细行；新增和移除颜色仍会报告。
 
 对比 CSV 报告是用于电子表格调色板漂移审阅的确定性 UTF-8 表格。对比 HTML 报告是可在浏览器中审阅的独立本地文件，并为每张图片提供紧凑的 CSS-only 并排调色板预览条。对比 Markdown 报告是适合笔记、议题评论和设计文档的便携表格。对比纯文本报告是确定性的 UTF-8 漂移单页，适合邮件、工单和审阅日志。这些报告都会包含安全表示的前后图片名称和路径、两侧各自的主色、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细、空变化列表的清晰 `None` 状态，以及漂移分数。你可以在同一个 `compare` 命令中同时请求 `--json`、`--csv`、`--html`、`--markdown` 和 `--text`。
@@ -234,12 +242,24 @@ swatch-story compare before.png after.png --colors 6 --sample-step 1 --matte 111
 swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --sample-step 1 --names --title "Baseline Drift Review" --json baseline-drift.json --markdown baseline-drift.md --text baseline-drift.txt --html baseline-drift.html
 ```
 
+当细小 RGB 差异不应变成独立漂移颜色时，对基准图和每张候选图使用相同的 Lab 聚类设置：
+
+```bash
+swatch-story baseline reference.png draft-a.png draft-b.png --colors 6 --cluster-distance 5 --cluster-space lab --json baseline-drift.json
+```
+
 `baseline` 命令要求一张基准图像、至少一张候选图像，并且至少提供 `--json PATH`、`--markdown PATH`、`--text PATH` 或 `--html PATH` 之一；四种输出可以同时请求。它会为每个候选图像复用 `compare` 的漂移逻辑，JSON 中的候选项保持输入顺序并包含排名和漂移分数，Markdown/文本/HTML 摘要按漂移分数降序排列。基准报告包含基准来源元数据、候选来源元数据、共有颜色、新增颜色、移除颜色、过滤后的颜色变化明细，以及已转义的用户来源标题、名称和路径。基准 HTML 报告是独立仪表盘，包含确定性内联 CSS、元数据面板、具有可排序外观的候选排名表，以及共有、新增、移除和变化颜色列表的可视色块。
 
 把多张本地图像审计合并为一个团队审阅报告：
 
 ```bash
 swatch-story batch hero.png card.png poster.png --colors 6 --sample-step 1 --names --title "Campaign Palette Review" --markdown campaign-review.md --html campaign-review.html
+```
+
+如果团队快照需要在所有输入中把视觉上接近的采样颜色分组，可以把 Lab 聚类加入 batch 抽取设置：
+
+```bash
+swatch-story batch hero.png card.png poster.png --colors 6 --cluster-distance 5 --cluster-space lab --markdown campaign-review.md
 ```
 
 `batch` 命令要求至少两个图像路径，并且至少提供 `--markdown PATH` 或 `--html PATH` 之一；两个输出可以同时请求。它会对每张图片复用相同的确定性调色板提取设置，并为每个来源图像写入一个 Markdown 章节或 HTML 卡片，包含来源名称/路径、图像尺寸、主色、调色板行/卡片，以及黑/白文字对比度建议。用户来源的标题、文件名、路径、标签和名称都会被转义，文件以确定性 UTF-8 写入。
@@ -492,11 +512,12 @@ pytest -q
 swatch-story 仍处于 alpha 阶段，但已经可用于本地、确定性的调色板提取和审阅报告。项目采用小步维护节奏：行为变更应配套测试，文档翻译应保持含义同步，并在每个功能切片后或发布标签前复查路线图。
 
 现在：
-- 用真实素材场景补强聚类文档和示例。
-- 为 compare、baseline 和 batch 流程中的 Lab 聚类添加轻量级报告夹具快照。
+- 在 Lab 聚类夹具/文档切片之后完成一次发布就绪复查，然后决定 swatch-story 应继续增长模式，还是转向维护模式。
 
 下一步：
 - 改进 gallery 示例，使其覆盖透明度、被忽略背景和感知聚类示例。
+- 添加一份简短发布检查清单，把验证命令、README 翻译同步和 changelog 复查与标签准备关联起来。
+- 如果完成复查没有发现面向用户的缺口，将路线图从功能增长转向维护：bug 修复、依赖卫生、文档准确性和报告 schema 稳定性。
 
 以后：
 - 评估用于发布自动化的可选机器可读 changelog 元数据。
